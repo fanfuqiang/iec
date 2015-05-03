@@ -379,6 +379,7 @@ void CodeGenAction::ExecuteAction() {
       return;
 
     // FIXME: This is stupid, IRReader shouldn't take ownership.
+    // realy make a copy
     llvm::MemoryBuffer *MainFileCopy =
       llvm::MemoryBuffer::getMemBufferCopy(MainFile->getBuffer(),
                                            getCurrentFile());

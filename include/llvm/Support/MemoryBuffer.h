@@ -49,7 +49,7 @@ public:
   const char *getBufferStart() const { return BufferStart; }
   const char *getBufferEnd() const   { return BufferEnd; }
   size_t getBufferSize() const { return BufferEnd-BufferStart; }
-
+  /* take the content as a string*/
   StringRef getBuffer() const {
     return StringRef(BufferStart, getBufferSize());
   }

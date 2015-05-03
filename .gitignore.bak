@@ -18,6 +18,8 @@
 x64/
 x86/
 build/
+# VS build directory
+build_vs/
 bld/
 [Bb]in/
 [Oo]bj/
@@ -48,6 +50,8 @@ dlldata.c
 *.pdb
 *.pgc
 *.pgd
+# Byte compiled python modules.
+*.pyc
 *.rsp
 *.sbr
 *.tlb

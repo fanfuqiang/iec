@@ -896,12 +896,14 @@ bool Parser::ParseParenExprOrCondition(ExprResult &ExprResult,
                                        Decl *&DeclResult,
                                        SourceLocation Loc,
                                        bool ConvertToBoolean) {
-  BalancedDelimiterTracker T(*this, tok::l_paren);
-  T.consumeOpen();
+  // zet
+  //BalancedDelimiterTracker T(*this, tok::l_paren);
+  //T.consumeOpen();
 
-  if (getLangOpts().CPlusPlus)
+  if (getLangOpts().CPlusPlus) {
+    assert(!"zet have changed clang too mush!");
     ParseCXXCondition(ExprResult, DeclResult, Loc, ConvertToBoolean);
-  else {
+  } else {
     ExprResult = ParseExpression();
     DeclResult = 0;
 
@@ -923,20 +925,19 @@ bool Parser::ParseParenExprOrCondition(ExprResult &ExprResult,
   }
 
   // Otherwise the condition is valid or the rparen is present.
-  T.consumeClose();
+  //T.consumeClose();
 
   // Check for extraneous ')'s to catch things like "if (foo())) {".  We know
   // that all callers are looking for a statement after the condition, so ")"
   // isn't valid.
-  while (Tok.is(tok::r_paren)) {
-    Diag(Tok, diag::err_extraneous_rparen_in_condition)
-      << FixItHint::CreateRemoval(Tok.getLocation());
-    ConsumeParen();
-  }
+  //while (Tok.is(tok::r_paren)) {
+  //  Diag(Tok, diag::err_extraneous_rparen_in_condition)
+  //    << FixItHint::CreateRemoval(Tok.getLocation());
+  //  ConsumeParen();
+  //}
 
   return false;
 }
-
 
 /// ParseIfStatement
 ///       if-statement: [C99 6.8.4.1]
@@ -944,18 +945,23 @@ bool Parser::ParseParenExprOrCondition(ExprResult &ExprResult,
 ///         'if' '(' expression ')' statement 'else' statement
 /// [C++]   'if' '(' condition ')' statement
 /// [C++]   'if' '(' condition ')' statement 'else' statement
+/// [iec]   'if' expression 'then' statement_list
+/// [iec]     { 'elsif' expression 'then' statement_list }
+/// [iec]     [ 'else' statement_list ]
+/// [iec]   'endif'
 ///
 StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   assert(Tok.is(tok::kw_if) && "Not an if stmt!");
   SourceLocation IfLoc = ConsumeToken();  // eat the 'if'.
 
-  if (Tok.isNot(tok::l_paren)) {
+  // zet
+  /*if (Tok.isNot(tok::l_paren)) {
     Diag(Tok, diag::err_expected_lparen_after) << "if";
     SkipUntil(tok::semi);
     return StmtError();
-  }
+  }*/
 
-  bool C99orCXX = getLangOpts().C99 || getLangOpts().CPlusPlus;
+  //bool C99orCXX = getLangOpts().C99 || getLangOpts().CPlusPlus;
 
   // C99 6.8.4p3 - In C99, the if statement is a block.  This is not
   // the case for C90.
@@ -969,7 +975,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   // while, for, and switch statements are local to the if, while, for, or
   // switch statement (including the controlled statement).
   //
-  ParseScope IfScope(this, Scope::DeclScope | Scope::ControlScope, C99orCXX);
+  //ParseScope IfScope(this, Scope::DeclScope | Scope::ControlScope, C99orCXX);
 
   // Parse the condition.
   ExprResult CondExp;
@@ -978,6 +984,12 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     return StmtError();
 
   FullExprArg FullCondExp(Actions.MakeFullExpr(CondExp.get(), IfLoc));
+  // zet, eat 'THEN' in if_statment
+  if (Tok.isNot(tok::kw_then)) {
+    Diag(Tok, diag::err_expected_then_after) << "condition-expression of if";
+    SkipUntil(tok::kw_end_if);
+    return StmtError();
+  }
 
   // C99 6.8.4p3 - In C99, the body of the if statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this
@@ -997,17 +1009,19 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   //    would have to notify ParseStatement not to create a new scope. It's
   //    simpler to let it create a new scope.
   //
-  ParseScope InnerScope(this, Scope::DeclScope,
-                        C99orCXX && Tok.isNot(tok::l_brace));
+  //ParseScope InnerScope(this, Scope::DeclScope,
+  //                      C99orCXX && Tok.isNot(tok::l_brace));
 
   // Read the 'then' stmt.
+  // zet, in C this location is after ')', so must eat 'THEN' before 
   SourceLocation ThenStmtLoc = Tok.getLocation();
 
   SourceLocation InnerStatementTrailingElseLoc;
+  // zet,  parse the statement_list after 'THEN'
   StmtResult ThenStmt(ParseStatement(&InnerStatementTrailingElseLoc));
 
   // Pop the 'if' scope if needed.
-  InnerScope.Exit();
+  //InnerScope.Exit();
 
   // If it has an else, parse it.
   SourceLocation ElseLoc;
@@ -1030,22 +1044,23 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     // The substatement in a selection-statement (each substatement, in the else
     // form of the if statement) implicitly defines a local scope.
     //
-    ParseScope InnerScope(this, Scope::DeclScope,
-                          C99orCXX && Tok.isNot(tok::l_brace));
+    //ParseScope InnerScope(this, Scope::DeclScope,
+    //                      C99orCXX && Tok.isNot(tok::l_brace));
 
     ElseStmt = ParseStatement();
 
     // Pop the 'else' scope if needed.
-    InnerScope.Exit();
+    //InnerScope.Exit();
   } else if (Tok.is(tok::code_completion)) {
+    assert(!"code_completion?");
     Actions.CodeCompleteAfterIf(getCurScope());
     cutOffParsing();
     return StmtError();
   } else if (InnerStatementTrailingElseLoc.isValid()) {
+    // TODO, zet, if expr else stmt else stmt - just a warnning??
     Diag(InnerStatementTrailingElseLoc, diag::warn_dangling_else);
   }
-
-  IfScope.Exit();
+  //IfScope.Exit();
 
   // If the condition was invalid, discard the if statement.  We could recover
   // better by replacing it with a valid expr, but don't do that yet.
