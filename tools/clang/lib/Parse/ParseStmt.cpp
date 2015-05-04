@@ -198,12 +198,16 @@ Retry:
 
   case tok::kw_if:                  // C99 6.8.4.1: if-statement
     return ParseIfStatement(TrailingElseLoc);
+  // zet
   case tok::kw_switch:              // C99 6.8.4.2: switch-statement
+  //case tok::kw_case:
     return ParseSwitchStatement(TrailingElseLoc);
 
   case tok::kw_while:               // C99 6.8.5.1: while-statement
     return ParseWhileStatement(TrailingElseLoc);
-  case tok::kw_do:                  // C99 6.8.5.2: do-statement
+  // zet, we have repeat but not do
+  //case tok::kw_do:                  // C99 6.8.5.2: do-statement
+  case tok::kw_repeat:
     Res = ParseDoStatement();
     SemiError = "do/while";
     break;
@@ -218,7 +222,9 @@ Retry:
     Res = ParseContinueStatement();
     SemiError = "continue";
     break;
-  case tok::kw_break:               // C99 6.8.6.3: break-statement
+  // zet
+  //case tok::kw_break:               // C99 6.8.6.3: break-statement
+  case tok::kw_exit:
     Res = ParseBreakStatement();
     SemiError = "break";
     break;
@@ -916,11 +922,13 @@ bool Parser::ParseParenExprOrCondition(ExprResult &ExprResult,
   // If the parser was confused by the condition and we don't have a ')', try to
   // recover by skipping ahead to a semi and bailing out.  If condexp is
   // semantically invalid but we have well formed code, keep going.
-  if (ExprResult.isInvalid() && !DeclResult && Tok.isNot(tok::r_paren)) {
-    SkipUntil(tok::semi);
+  if (ExprResult.isInvalid() && !DeclResult /* && Tok.isNot(tok::r_paren) */ ) {
+    // TODO, zet, what can we skip to?
+    //SkipUntil(tok::semi);
     // Skipping may have stopped if it found the containing ')'.  If so, we can
     // continue parsing the if statement.
-    if (Tok.isNot(tok::r_paren))
+    // zet, only return true represent condition-expression was failed
+    //if (Tok.isNot(tok::r_paren))
       return true;
   }
 
@@ -1061,7 +1069,12 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     Diag(InnerStatementTrailingElseLoc, diag::warn_dangling_else);
   }
   //IfScope.Exit();
-
+  // zet, eat 'END_IF' in if_statment
+  if (Tok.isNot(tok::kw_end_if)) {
+    Diag(Tok, diag::err_expected_then_after) << "if statement_list";
+    SkipUntil(tok::kw_end_if);
+    return StmtError();
+  }
   // If the condition was invalid, discard the if statement.  We could recover
   // better by replacing it with a valid expr, but don't do that yet.
   if (CondExp.isInvalid() && !CondVar)
@@ -1179,16 +1192,18 @@ StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc) {
 ///       while-statement: [C99 6.8.5.1]
 ///         'while' '(' expression ')' statement
 /// [C++]   'while' '(' condition ')' statement
+/// [iec]   'while' expression 'do' statement_list 'end_while'
+///
 StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
   assert(Tok.is(tok::kw_while) && "Not a while stmt!");
   SourceLocation WhileLoc = Tok.getLocation();
   ConsumeToken();  // eat the 'while'.
 
-  if (Tok.isNot(tok::l_paren)) {
-    Diag(Tok, diag::err_expected_lparen_after) << "while";
-    SkipUntil(tok::semi);
-    return StmtError();
-  }
+  //if (Tok.isNot(tok::l_paren)) {
+  //  Diag(Tok, diag::err_expected_lparen_after) << "while";
+  //  SkipUntil(tok::semi);
+  //  return StmtError();
+  //}
 
   bool C99orCXX = getLangOpts().C99 || getLangOpts().CPlusPlus;
 
@@ -1205,11 +1220,13 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
   // switch statement (including the controlled statement).
   //
   unsigned ScopeFlags;
-  if (C99orCXX)
+  if (C99orCXX) {
+    assert(!"deal with CXX !");
     ScopeFlags = Scope::BreakScope | Scope::ContinueScope |
                  Scope::DeclScope  | Scope::ControlScope;
-  else
+  } else
     ScopeFlags = Scope::BreakScope | Scope::ContinueScope;
+  // TODO, zet, does iec has scope in statement ?
   ParseScope WhileScope(this, ScopeFlags);
 
   // Parse the condition.
@@ -1231,15 +1248,29 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
   // See comments in ParseIfStatement for why we create a scope for the
   // condition and a new scope for substatement in C++.
   //
-  ParseScope InnerScope(this, Scope::DeclScope,
-                        C99orCXX && Tok.isNot(tok::l_brace));
+  //ParseScope InnerScope(this, Scope::DeclScope,
+  //                      C99orCXX && Tok.isNot(tok::l_brace));
 
+  // zet, eat 'DO' in if_statment
+  if (Tok.isNot(tok::kw_do)) {
+    Diag(Tok, diag::err_expected_then_after) << "condition-expression of while";
+    // zet, skip to end_while or do ?
+    SkipUntil(tok::kw_end_while);
+    return StmtError();
+  }
   // Read the body statement.
+  // TODO, zet, here is STATEMENT_LIST actually
   StmtResult Body(ParseStatement(TrailingElseLoc));
 
   // Pop the body scope if needed.
-  InnerScope.Exit();
+  //InnerScope.Exit();
   WhileScope.Exit();
+  // zet, eat 'END_WHILE' in if_statment
+  if (Tok.isNot(tok::kw_end_while)) {
+    Diag(Tok, diag::err_expected_then_after) << "while statement_list";
+    SkipUntil(tok::kw_end_while);
+    return StmtError();
+  }
 
   if ((Cond.isInvalid() && !CondVar) || Body.isInvalid())
     return StmtError();
@@ -1250,17 +1281,20 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
 /// ParseDoStatement
 ///       do-statement: [C99 6.8.5.2]
 ///         'do' statement 'while' '(' expression ')' ';'
+/// [iec] 'repeat' statement_list 'until' expression 'end_repeat'
 /// Note: this lets the caller parse the end ';'.
+///
 StmtResult Parser::ParseDoStatement() {
-  assert(Tok.is(tok::kw_do) && "Not a do stmt!");
+  assert(Tok.is(tok::kw_repeat) && "Not a repeat stmt!");
   SourceLocation DoLoc = ConsumeToken();  // eat the 'do'.
 
   // C99 6.8.5p5 - In C99, the do statement is a block.  This is not
   // the case for C90.  Start the loop scope.
   unsigned ScopeFlags;
-  if (getLangOpts().C99)
+  if (getLangOpts().C99) {
+    assert(!"C99 !");
     ScopeFlags = Scope::BreakScope | Scope::ContinueScope | Scope::DeclScope;
-  else
+  } else
     ScopeFlags = Scope::BreakScope | Scope::ContinueScope;
 
   ParseScope DoScope(this, ScopeFlags);
@@ -1273,15 +1307,22 @@ StmtResult Parser::ParseDoStatement() {
   // The substatement in an iteration-statement implicitly defines a local scope
   // which is entered and exited each time through the loop.
   //
-  ParseScope InnerScope(this, Scope::DeclScope,
-                        (getLangOpts().C99 || getLangOpts().CPlusPlus) &&
-                        Tok.isNot(tok::l_brace));
+  //ParseScope InnerScope(this, Scope::DeclScope,
+  //                      (getLangOpts().C99 || getLangOpts().CPlusPlus) &&
+  //                      Tok.isNot(tok::l_brace));
 
   // Read the body statement.
+  // TODO, zet, should be statement_list
   StmtResult Body(ParseStatement());
-
+  
+  // zet, eat 'UNTIL' in if_statment
+  if (Tok.isNot(tok::kw_until)) {
+    Diag(Tok, diag::err_expected_then_after) << "statement_list of repaet";
+    SkipUntil(tok::kw_end_repeat);
+    return StmtError();
+  }
   // Pop the body scope if needed.
-  InnerScope.Exit();
+  //InnerScope.Exit();
 
   if (Tok.isNot(tok::kw_while)) {
     if (!Body.isInvalid()) {
