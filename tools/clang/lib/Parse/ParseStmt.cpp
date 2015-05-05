@@ -1071,7 +1071,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   //IfScope.Exit();
   // zet, eat 'END_IF' in if_statment
   if (Tok.isNot(tok::kw_end_if)) {
-    Diag(Tok, diag::err_expected_then_after) << "if statement_list";
+    Diag(Tok, diag::err_expected_matched_end_if);
     SkipUntil(tok::kw_end_if);
     return StmtError();
   }
@@ -1104,15 +1104,22 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
 ///       switch-statement:
 ///         'switch' '(' expression ')' statement
 /// [C++]   'switch' '(' condition ')' statement
+/// [iec] case_statement
+/// [iec]   'case' expression 'of'
+/// [iec]     case_element {case_element}
+/// [iec]     ['else' statement_list]
+/// [iec]   'case_end'
+///
 StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc) {
-  assert(Tok.is(tok::kw_switch) && "Not a switch stmt!");
-  SourceLocation SwitchLoc = ConsumeToken();  // eat the 'switch'.
+  // zet, now our kw_case is kw_switch in C++
+  assert(Tok.is(tok::kw_case) && "Not a case statement!");
+  SourceLocation SwitchLoc = ConsumeToken();  // eat the 'case'.
 
-  if (Tok.isNot(tok::l_paren)) {
-    Diag(Tok, diag::err_expected_lparen_after) << "switch";
-    SkipUntil(tok::semi);
-    return StmtError();
-  }
+  //if (Tok.isNot(tok::l_paren)) {
+  //  Diag(Tok, diag::err_expected_lparen_after) << "switch";
+  //  SkipUntil(tok::semi);
+  //  return StmtError();
+  //}
 
   bool C99orCXX = getLangOpts().C99 || getLangOpts().CPlusPlus;
 
@@ -1129,8 +1136,10 @@ StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc) {
   // switch statement (including the controlled statement).
   //
   unsigned ScopeFlags = Scope::BreakScope | Scope::SwitchScope;
-  if (C99orCXX)
+  if (C99orCXX) {
+    assert(!"lang is C++ !");
     ScopeFlags |= Scope::DeclScope | Scope::ControlScope;
+  }
   ParseScope SwitchScope(this, ScopeFlags);
 
   // Parse the condition.
@@ -1138,6 +1147,13 @@ StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc) {
   Decl *CondVar = 0;
   if (ParseParenExprOrCondition(Cond, CondVar, SwitchLoc, false))
     return StmtError();
+  // zet, eat the of
+  if (Tok.isNot(tok::kw_of)) {
+    Diag(Tok, diag::err_expected_of_after) << "case expression";
+    // TODO, zet, consistent with other statement
+    SkipUntil(tok::kw_of);
+    return StmtError();
+  }
 
   StmtResult Switch
     = Actions.ActOnStartOfSwitchStmt(SwitchLoc, Cond.get(), CondVar);
@@ -1166,14 +1182,14 @@ StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc) {
   // See comments in ParseIfStatement for why we create a scope for the
   // condition and a new scope for substatement in C++.
   //
-  ParseScope InnerScope(this, Scope::DeclScope,
-                        C99orCXX && Tok.isNot(tok::l_brace));
-
+  //ParseScope InnerScope(this, Scope::DeclScope,
+  //                      C99orCXX && Tok.isNot(tok::l_brace));
+ 
   // Read the body statement.
   StmtResult Body(ParseStatement(TrailingElseLoc));
 
   // Pop the scopes.
-  InnerScope.Exit();
+  //InnerScope.Exit();
   SwitchScope.Exit();
 
   if (Body.isInvalid()) {
@@ -1253,7 +1269,7 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
 
   // zet, eat 'DO' in if_statment
   if (Tok.isNot(tok::kw_do)) {
-    Diag(Tok, diag::err_expected_then_after) << "condition-expression of while";
+    Diag(Tok, diag::err_expected_do_after) << "condition-expression of while";
     // zet, skip to end_while or do ?
     SkipUntil(tok::kw_end_while);
     return StmtError();
@@ -1267,7 +1283,7 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
   WhileScope.Exit();
   // zet, eat 'END_WHILE' in if_statment
   if (Tok.isNot(tok::kw_end_while)) {
-    Diag(Tok, diag::err_expected_then_after) << "while statement_list";
+    Diag(Tok, diag::err_expected_matched_end_while);
     SkipUntil(tok::kw_end_while);
     return StmtError();
   }
@@ -1317,32 +1333,33 @@ StmtResult Parser::ParseDoStatement() {
   
   // zet, eat 'UNTIL' in if_statment
   if (Tok.isNot(tok::kw_until)) {
-    Diag(Tok, diag::err_expected_then_after) << "statement_list of repaet";
+    Diag(Tok, diag::err_expected_until_after) << "statement_list of repaet";
     SkipUntil(tok::kw_end_repeat);
     return StmtError();
   }
   // Pop the body scope if needed.
   //InnerScope.Exit();
 
-  if (Tok.isNot(tok::kw_while)) {
-    if (!Body.isInvalid()) {
-      Diag(Tok, diag::err_expected_while);
-      Diag(DoLoc, diag::note_matching) << "do";
-      SkipUntil(tok::semi, false, true);
-    }
-    return StmtError();
-  }
+  //if (Tok.isNot(tok::kw_while)) {
+  //  if (!Body.isInvalid()) {
+  //    Diag(Tok, diag::err_expected_while);
+  //    Diag(DoLoc, diag::note_matching) << "do";
+  //    SkipUntil(tok::semi, false, true);
+  //  }
+  //  return StmtError();
+  //}
+  // zet, this location is for 'UNTIL'
   SourceLocation WhileLoc = ConsumeToken();
 
-  if (Tok.isNot(tok::l_paren)) {
-    Diag(Tok, diag::err_expected_lparen_after) << "do/while";
-    SkipUntil(tok::semi, false, true);
-    return StmtError();
-  }
+  //if (Tok.isNot(tok::l_paren)) {
+  //  Diag(Tok, diag::err_expected_lparen_after) << "do/while";
+  //  SkipUntil(tok::semi, false, true);
+  //  return StmtError();
+  //}
 
   // Parse the parenthesized condition.
-  BalancedDelimiterTracker T(*this, tok::l_paren);
-  T.consumeOpen();
+  //BalancedDelimiterTracker T(*this, tok::l_paren);
+  //T.consumeOpen();
 
   // FIXME: Do not just parse the attribute contents and throw them away
   ParsedAttributesWithRange attrs(AttrFactory);
@@ -1350,14 +1367,22 @@ StmtResult Parser::ParseDoStatement() {
   ProhibitAttributes(attrs);
 
   ExprResult Cond = ParseExpression();
-  T.consumeClose();
+  //T.consumeClose();
+  // zet, ActOnDoStmt() need this, so simulate one for the API
+  SourceLocation EndRepeatLoc = ConsumeToken();
+  // zet, eat 'end_repeat' in if_statment
+  if (Tok.isNot(tok::kw_end_repeat)) {
+    Diag(Tok, diag::err_expected_matched_end_repeat);
+    SkipUntil(tok::kw_end_repeat);
+    return StmtError();
+  }
   DoScope.Exit();
 
   if (Cond.isInvalid() || Body.isInvalid())
     return StmtError();
 
-  return Actions.ActOnDoStmt(DoLoc, Body.get(), WhileLoc, T.getOpenLocation(),
-                             Cond.get(), T.getCloseLocation());
+  return Actions.ActOnDoStmt(DoLoc, Body.get(), WhileLoc, /*T.getOpenLocation()*/ WhileLoc,
+                             Cond.get(), /*T.getCloseLocation()*/ EndRepeatLoc);
 }
 
 /// ParseForStatement
