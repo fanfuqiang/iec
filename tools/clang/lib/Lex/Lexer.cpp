@@ -1346,12 +1346,14 @@ SourceLocation Lexer::findLocationAfterToken(SourceLocation Loc,
 char Lexer::getCharAndSizeSlow(const char *Ptr, unsigned &Size,
                                Token *Tok) {
   // If we have a slash, look for an escaped newline.
-  if (Ptr[0] == '\\') {
+  // zet
+  if (Ptr[0] == /*'\\'*/ '$') {
     ++Size;
     ++Ptr;
 Slash:
     // Common case, backslash-char where the char is not whitespace.
-    if (!isWhitespace(Ptr[0])) return '\\';
+    // zet
+    if (!isWhitespace(Ptr[0])) return /*'\\'*/ '$';
 
     // See if we have optional whitespace characters between the slash and
     // newline.
@@ -1478,8 +1480,8 @@ void Lexer::LexIdentifier(Token &Result, const char *CurPtr) {
 
   // st identifier trailing underline is not allowed
   // TODO: multiple underlines is not allowed, should we do this ?
-  if (*CurPtr == '_')
-    Diag(CurPtr, diag::err_trail_under_in_identifier);
+  //if (*CurPtr == '_')
+  //  Diag(CurPtr, diag::err_trail_under_in_identifier);
 
   // Fast path, no $,\,? in identifier found.  '\' might be an escaped newline
   // or UCN, and ? might be a trigraph for '\', an escaped newline or UCN.
@@ -1542,17 +1544,19 @@ FinishIdentifier:
 
 /// isHexaLiteral - Return true if Start points to a hex constant.
 /// in microsoft mode (where this is supposed to be several different tokens).
+/// zet
 bool Lexer::isHexaLiteral(const char *Start, const LangOptions &LangOpts) {
   unsigned Size;
   char C1 = Lexer::getCharAndSizeNoWarn(Start, Size, LangOpts);
   if (C1 != '1')
     return false;
-  char C2 = Lexer::getCharAndSizeNoWarn(Start + size, Size, LangOpts);
+  char C2 = Lexer::getCharAndSizeNoWarn(Start + Size, Size, LangOpts);
   if (C2 != '6')
     return false;
   char C3 = Lexer::getCharAndSizeNoWarn(Start + Size, Size, LangOpts);
   return C2 == '#';
 }
+/// zet
 ///
 bool Lexer::isOctaLiteral(const char *Start, const LangOptions &LangOpts) {
   unsigned Size;
@@ -1563,6 +1567,7 @@ bool Lexer::isOctaLiteral(const char *Start, const LangOptions &LangOpts) {
   return C2 == '#';
 }
 
+/// zet
 ///
 bool Lexer::isBinaLiteral(const char *Start, const LangOptions &LangOpts) {
   unsigned Size;
@@ -1584,6 +1589,12 @@ void Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
     CurPtr = ConsumeChar(CurPtr, Size, Result);
     PrevCh = C;
     C = getCharAndSize(CurPtr, Size);
+  }
+
+  // zet, '_' and '#' is legal
+  // TODO, if have more than one consecutive '_' ?
+  if ((C == '_' || C == '#') && isNumberBody(PrevCh)) {
+    return LexNumericConstant(Result, ConsumeChar(CurPtr, Size, Result));
   }
 
   // If we fell out, check for a sign, due to 1e+12.  If we have one, continue.
@@ -1660,6 +1671,8 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr) {
 /// either " or L" or u8" or u" or U".
 void Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
                              tok::TokenKind Kind) {
+  // zet
+  const char quote = *BufferPtr;  // remember ' or "
   const char *NulCharacter = 0; // Does this string contain the \0 character?
 
   if (!isLexingRawMode() &&
@@ -1667,9 +1680,9 @@ void Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
        Kind == tok::utf16_string_literal ||
        Kind == tok::utf32_string_literal))
     Diag(BufferPtr, diag::warn_cxx98_compat_unicode_literal);
-
+  // zet, if have escaped characters, will be processed here
   char C = getAndAdvanceChar(CurPtr, Result);
-  while (C != '"') {
+  while (C != /*'"'*/ quote) {
     // Skip escaped characters.  Escaped newlines will already be processed by
     // getAndAdvanceChar.
     if (C == '\\')
@@ -2870,12 +2883,14 @@ LexNextToken:
     break;
 
   // C99 6.4.4: Character Constants.
-  case '\'':
-    // Notify MIOpt that we read a non-whitespace/non-comment token.
-    MIOpt.ReadToken();
-    return LexCharConstant(Result, CurPtr, tok::char_constant);
+  //case '\'':
+  //  // Notify MIOpt that we read a non-whitespace/non-comment token.
+  //  MIOpt.ReadToken();
+  //  return LexCharConstant(Result, CurPtr, tok::char_constant);
 
   // C99 6.4.5: String Literals.
+  // zet
+  case '\'':
   case '"':
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();

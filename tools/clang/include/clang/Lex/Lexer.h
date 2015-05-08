@@ -473,7 +473,8 @@ private:
   /// can return false for characters that end up being the same, but it will
   /// never return true for something that needs to be mapped.
   static bool isObviouslySimpleCharacter(char C) {
-    return C != '?' && C != '\\';
+    // zet
+    return /*&& C != '?' && C != '\\'*/ C != '$';
   }
 
   /// getAndAdvanceChar - Read a single 'character' from the specified buffer,
