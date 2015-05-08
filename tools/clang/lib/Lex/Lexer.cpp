@@ -2191,7 +2191,7 @@ bool Lexer::SkipBlockComment(Token &Result, const char *CurPtr) {
 
   // Check to see if the first character after the '/*' is another /.  If so,
   // then this slash does not end the block comment, it is part of it.
-  if (C == '/')
+  if (C == /*'/'*/ ')')
     C = *CurPtr++;
 
   while (1) {
@@ -2202,14 +2202,13 @@ bool Lexer::SkipBlockComment(Token &Result, const char *CurPtr) {
         // doesn't check for '\0'.
         !(PP && PP->getCodeCompletionFileLoc() == FileLoc)) {
       // While not aligned to a 16-byte boundary.
-      while (C != '/' && ((intptr_t)CurPtr & 0x0F) != 0)
+      while (C != /*'/'*/ ')' && ((intptr_t)CurPtr & 0x0F) != 0)
         C = *CurPtr++;
 
-      //if (C == '/') goto FoundSlash;
-      if (C == ')') goto FoundSlash;
+      if (C == /*'/'*/ ')') goto FoundSlash;
 
 #ifdef __SSE2__
-      __m128i Slashes = _mm_set1_epi8('/');
+      __m128i Slashes = _mm_set1_epi8(/*'/'*/ ')');
       while (CurPtr+16 <= BufferEnd) {
         int cmp = _mm_movemask_epi8(_mm_cmpeq_epi8(*(const __m128i*)CurPtr,
                                     Slashes));
@@ -2223,6 +2222,7 @@ bool Lexer::SkipBlockComment(Token &Result, const char *CurPtr) {
         CurPtr += 16;
       }
 #elif __ALTIVEC__
+      assert(!"zet, #define __ALTIVEC__ ?");
       __vector unsigned char Slashes = {
         '/', '/', '/', '/',  '/', '/', '/', '/',
         '/', '/', '/', '/',  '/', '/', '/', '/'
@@ -2232,10 +2232,10 @@ bool Lexer::SkipBlockComment(Token &Result, const char *CurPtr) {
         CurPtr += 16;
 #else
       // Scan for '/' quickly.  Many block comments are very large.
-      while (CurPtr[0] != '/' &&
-             CurPtr[1] != '/' &&
-             CurPtr[2] != '/' &&
-             CurPtr[3] != '/' &&
+      while (CurPtr[0] != /*'/'*/ ')' &&
+             CurPtr[1] != /*'/'*/ ')' &&
+             CurPtr[2] != /*'/'*/ ')' &&
+             CurPtr[3] != /*'/'*/ ')' &&
              CurPtr+4 < BufferEnd) {
         CurPtr += 4;
       }
@@ -2246,11 +2246,10 @@ bool Lexer::SkipBlockComment(Token &Result, const char *CurPtr) {
     }
 
     // Loop to scan the remainder.
-    while (C != '/' && C != '\0')
+    while (C != /*'/'*/ ')' && C != '\0')
       C = *CurPtr++;
 
-    //if (C == '/') {
-    if (C == ')') {
+    if (C == /*'/'*/ ')') {
   FoundSlash:
       if (CurPtr[-2] == '*')  // We found the final */.  We're done!
         break;
@@ -2262,7 +2261,7 @@ bool Lexer::SkipBlockComment(Token &Result, const char *CurPtr) {
           break;
         }
       }
-      if (CurPtr[0] == '*' && CurPtr[1] != '/') {
+      if (CurPtr[0] == '*' && CurPtr[1] != /*'/'*/ ')') {
         // If this is a /* inside of the comment, emit a warning.  Don't do this
         // if this is a /*/, which will end the comment.  This misses cases with
         // embedded escaped newlines, but oh well.
@@ -2893,7 +2892,7 @@ LexNextToken:
     Kind = tok::r_square;
     break;
   case '(':
-    // 6.4.9: Comments
+    // zet
     Char = getCharAndSize(CurPtr, SizeTmp);
 
     if (Char == '*') {  // /**/ comment.
@@ -2908,6 +2907,30 @@ LexNextToken:
     Kind = tok::r_paren;
     break;
   case '{':
+    // zet
+    // CurPtr point to the character after '{'
+    Char = getCharAndSize(CurPtr, SizeTmp);
+    CurPtr += SizeTmp;
+    // zet, from SkipBlockComment()
+    if (Char == 0 && CurPtr == BufferEnd+1) {
+      if (!isLexingRawMode())
+        Diag(BufferPtr, diag::err_unterminated_block_comment);
+      // zet, keep *CurPtr == 0
+      --CurPtr;
+      BufferPtr = CurPtr;
+    }
+    // zet, eat every thing until meet '}'
+    do {
+      if (Char == '}')
+        break;
+      Char = *CurPtr++;
+    } while (1);
+    // Otherwise, just return so that the next character will be lexed as a token.
+    BufferPtr = CurPtr;
+    Result.setFlag(Token::LeadingSpace);
+    goto LexNextToken;
+    // zet
+    assert(!"after goto statement ?");
     Kind = tok::l_brace;
     break;
   case '}':
@@ -3000,7 +3023,6 @@ LexNextToken:
     }
     break;
   case '/':
-#if 0
     // 6.4.9: Comments
     Char = getCharAndSize(CurPtr, SizeTmp);
     if (Char == '/') {         // Line comment.
@@ -3030,7 +3052,7 @@ LexNextToken:
         return; // There is a token to return.
       goto LexNextToken;   // GCC isn't tail call eliminating.
     }
-#endif
+
     if (Char == '=') {
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
       Kind = tok::slashequal;
