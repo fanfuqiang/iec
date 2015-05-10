@@ -1347,56 +1347,58 @@ char Lexer::getCharAndSizeSlow(const char *Ptr, unsigned &Size,
                                Token *Tok) {
   // If we have a slash, look for an escaped newline.
   // zet
-  if (Ptr[0] == /*'\\'*/ '$') {
-    ++Size;
-    ++Ptr;
-Slash:
-    // Common case, backslash-char where the char is not whitespace.
-    // zet
-    if (!isWhitespace(Ptr[0])) return /*'\\'*/ '$';
+//  if (Ptr[0] == /*'\\'*/ '$') {
+//    ++Size;
+//    ++Ptr;
+//Slash:
+//    // Common case, backslash-char where the char is not whitespace.
+//    // zet
+//    if (!isWhitespace(Ptr[0])) return /*'\\'*/ '$';
+//
+//    // See if we have optional whitespace characters between the slash and
+//    // newline.
+//    if (unsigned EscapedNewLineSize = getEscapedNewLineSize(Ptr)) {
+//      // Remember that this token needs to be cleaned.
+//      if (Tok) Tok->setFlag(Token::NeedsCleaning);
+//
+//      // Warn if there was whitespace between the backslash and newline.
+//      if (Ptr[0] != '\n' && Ptr[0] != '\r' && Tok && !isLexingRawMode())
+//        Diag(Ptr, diag::backslash_newline_space);
+//
+//      // Found backslash<whitespace><newline>.  Parse the char after it.
+//      Size += EscapedNewLineSize;
+//      Ptr  += EscapedNewLineSize;
+//
+//      // If the char that we finally got was a \n, then we must have had
+//      // something like \<newline><newline>.  We don't want to consume the
+//      // second newline.
+//      if (*Ptr == '\n' || *Ptr == '\r' || *Ptr == '\0')
+//        return ' ';
+//
+//      // Use slow version to accumulate a correct size field.
+//      return getCharAndSizeSlow(Ptr, Size, Tok);
+//    }
+//
+//    // Otherwise, this is not an escaped newline, just return the slash.
+//    // zet
+//    return /*'\\'*/ '$';
+//  }
 
-    // See if we have optional whitespace characters between the slash and
-    // newline.
-    if (unsigned EscapedNewLineSize = getEscapedNewLineSize(Ptr)) {
-      // Remember that this token needs to be cleaned.
-      if (Tok) Tok->setFlag(Token::NeedsCleaning);
-
-      // Warn if there was whitespace between the backslash and newline.
-      if (Ptr[0] != '\n' && Ptr[0] != '\r' && Tok && !isLexingRawMode())
-        Diag(Ptr, diag::backslash_newline_space);
-
-      // Found backslash<whitespace><newline>.  Parse the char after it.
-      Size += EscapedNewLineSize;
-      Ptr  += EscapedNewLineSize;
-
-      // If the char that we finally got was a \n, then we must have had
-      // something like \<newline><newline>.  We don't want to consume the
-      // second newline.
-      if (*Ptr == '\n' || *Ptr == '\r' || *Ptr == '\0')
-        return ' ';
-
-      // Use slow version to accumulate a correct size field.
-      return getCharAndSizeSlow(Ptr, Size, Tok);
-    }
-
-    // Otherwise, this is not an escaped newline, just return the slash.
-    return '\\';
-  }
-
+  // zet
   // If this is a trigraph, process it.
-  if (Ptr[0] == '?' && Ptr[1] == '?') {
-    // If this is actually a legal trigraph (not something like "??x"), emit
-    // a trigraph warning.  If so, and if trigraphs are enabled, return it.
-    if (char C = DecodeTrigraphChar(Ptr+2, Tok ? this : 0)) {
-      // Remember that this token needs to be cleaned.
-      if (Tok) Tok->setFlag(Token::NeedsCleaning);
+  //if (Ptr[0] == '?' && Ptr[1] == '?') {
+  //  // If this is actually a legal trigraph (not something like "??x"), emit
+  //  // a trigraph warning.  If so, and if trigraphs are enabled, return it.
+  //  if (char C = DecodeTrigraphChar(Ptr+2, Tok ? this : 0)) {
+  //    // Remember that this token needs to be cleaned.
+  //    if (Tok) Tok->setFlag(Token::NeedsCleaning);
 
-      Ptr += 3;
-      Size += 3;
-      if (C == '\\') goto Slash;
-      return C;
-    }
-  }
+  //    Ptr += 3;
+  //    Size += 3;
+  //    if (C == '\\') goto Slash;
+  //    return C;
+  //  }
+  //}
 
   // If this is neither, return a single character.
   ++Size;
@@ -1685,8 +1687,9 @@ void Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
   while (C != /*'"'*/ quote) {
     // Skip escaped characters.  Escaped newlines will already be processed by
     // getAndAdvanceChar.
-    if (C == '\\')
-      C = getAndAdvanceChar(CurPtr, Result);
+    // zet
+    //if (C == '\\')
+    //  C = getAndAdvanceChar(CurPtr, Result);
     
     if (C == '\n' || C == '\r' ||             // Newline.
         (C == 0 && CurPtr-1 == BufferEnd)) {  // End of file.
@@ -1698,6 +1701,7 @@ void Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
     
     if (C == 0) {
       if (isCodeCompletionPoint(CurPtr-1)) {
+        assert(!"code completion point ?");
         PP->CodeCompleteNaturalLanguage();
         FormTokenWithChars(Result, CurPtr-1, tok::unknown);
         return cutOffLexing();
@@ -1709,8 +1713,9 @@ void Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
   }
 
   // If we are in C++11, lex the optional ud-suffix.
-  if (getLangOpts().CPlusPlus)
-    CurPtr = LexUDSuffix(Result, CurPtr);
+  // zet
+  //if (getLangOpts().CPlusPlus)
+  //  CurPtr = LexUDSuffix(Result, CurPtr);
 
   // If a nul character existed in the string, warn about it.
   if (NulCharacter && !isLexingRawMode())
