@@ -1607,21 +1607,22 @@ void Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
       return LexNumericConstant(Result, ConsumeChar(CurPtr, Size, Result));
   }
 
+  // zet
   // If we have a hex FP constant, continue.
-  if ((C == '-' || C == '+') && (PrevCh == 'P' || PrevCh == 'p')) {
-    // Outside C99, we accept hexadecimal floating point numbers as a
-    // not-quite-conforming extension. Only do so if this looks like it's
-    // actually meant to be a hexfloat, and not if it has a ud-suffix.
-    bool IsHexFloat = true;
-    if (!LangOpts.C99) {
-      if (!isHexaLiteral(BufferPtr, LangOpts))
-        IsHexFloat = false;
-      else if (std::find(BufferPtr, CurPtr, '_') != CurPtr)
-        IsHexFloat = false;
-    }
-    if (IsHexFloat)
-      return LexNumericConstant(Result, ConsumeChar(CurPtr, Size, Result));
-  }
+  //if ((C == '-' || C == '+') && (PrevCh == 'P' || PrevCh == 'p')) {
+  //  // Outside C99, we accept hexadecimal floating point numbers as a
+  //  // not-quite-conforming extension. Only do so if this looks like it's
+  //  // actually meant to be a hexfloat, and not if it has a ud-suffix.
+  //  bool IsHexFloat = true;
+  //  if (!LangOpts.C99) {
+  //    if (!isHexaLiteral(BufferPtr, LangOpts))
+  //      IsHexFloat = false;
+  //    else if (std::find(BufferPtr, CurPtr, '_') != CurPtr)
+  //      IsHexFloat = false;
+  //  }
+  //  if (IsHexFloat)
+  //    return LexNumericConstant(Result, ConsumeChar(CurPtr, Size, Result));
+  //}
 
   // Update the location of token as well as BufferPtr.
   const char *TokStart = BufferPtr;
@@ -2650,6 +2651,8 @@ LexNextToken:
 
     // Check if we are performing code completion.
     if (isCodeCompletionPoint(CurPtr-1)) {
+      // zet
+      assert(!"code completion point ?");
       // Return the code-completion token.
       Result.startToken();
       FormTokenWithChars(Result, CurPtr, tok::code_completion);
@@ -2667,6 +2670,8 @@ LexNextToken:
   case 26:  // DOS & CP/M EOF: "^Z".
     // If we're in Microsoft extensions mode, treat this as end of file.
     if (LangOpts.MicrosoftExt) {
+      // zet
+      assert(!"MS extention ?");
       // Read the PP instance variable into an automatic variable, because
       // LexEndOfFile will often delete 'this'.
       Preprocessor *PPCache = PP;
@@ -2719,12 +2724,13 @@ LexNextToken:
 
     // If the next token is obviously a // or /* */ comment, skip it efficiently
     // too (without going through the big switch stmt).
-    if (CurPtr[0] == '/' && CurPtr[1] == '/' && !inKeepCommentMode() &&
-        LangOpts.LineComment && !LangOpts.TraditionalCPP) {
-      if (SkipLineComment(Result, CurPtr+2))
-        return; // There is a token to return.
-      goto SkipIgnoredUnits;
-    } else if (CurPtr[0] == '/' && CurPtr[1] == '*' && !inKeepCommentMode()) {
+    //if (CurPtr[0] == '/' && CurPtr[1] == '/' && !inKeepCommentMode() &&
+    //    LangOpts.LineComment && !LangOpts.TraditionalCPP) {
+    //  if (SkipLineComment(Result, CurPtr+2))
+    //    return; // There is a token to return.
+    //  goto SkipIgnoredUnits;
+    //} else
+    if (CurPtr[0] == '/' && CurPtr[1] == '*' && !inKeepCommentMode()) {
       if (SkipBlockComment(Result, CurPtr+2))
         return; // There is a token to return.
       goto SkipIgnoredUnits;
@@ -2741,6 +2747,8 @@ LexNextToken:
     MIOpt.ReadToken();
     return LexNumericConstant(Result, CurPtr);
 
+    // zet
+#if 0
   case 'u':   // Identifier (uber) or C++0x UTF-8 or UTF-16 string literal
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
@@ -2860,15 +2868,17 @@ LexNextToken:
       return LexCharConstant(Result, ConsumeChar(CurPtr, SizeTmp, Result),
                              tok::wide_char_constant);
     // FALL THROUGH, treating L like the start of an identifier.
+# endif
 
+  // zet, add cases L,R,U,u
   // C99 6.4.2: Identifiers.
   case 'A': case 'B': case 'C': case 'D': case 'E': case 'F': case 'G':
-  case 'H': case 'I': case 'J': case 'K':    /*'L'*/case 'M': case 'N':
-  case 'O': case 'P': case 'Q':    /*'R'*/case 'S': case 'T':    /*'U'*/
+  case 'H': case 'I': case 'J': case 'K': /*'L'*/case 'L': case 'M': case 'N':
+  case 'O': case 'P': case 'Q': /*'R'*/case 'R': case 'S': case 'T': /*'U'*/case 'U':
   case 'V': case 'W': case 'X': case 'Y': case 'Z':
   case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': case 'g':
   case 'h': case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
-  case 'o': case 'p': case 'q': case 'r': case 's': case 't':    /*'u'*/
+  case 'o': case 'p': case 'q': case 'r': case 's': case 't': /*'u'*/case 'u':
   case 'v': case 'w': case 'x': case 'y': case 'z':
   case '_':
     // Notify MIOpt that we read a non-whitespace/non-comment token.
@@ -2946,6 +2956,7 @@ LexNextToken:
       Char = *CurPtr++;
     } while (1);
     // Otherwise, just return so that the next character will be lexed as a token.
+    // CurPtr point to the character after '}'
     BufferPtr = CurPtr;
     Result.setFlag(Token::LeadingSpace);
     goto LexNextToken;
@@ -2953,9 +2964,10 @@ LexNextToken:
     assert(!"after goto statement ?");
     Kind = tok::l_brace;
     break;
-  case '}':
-    Kind = tok::r_brace;
-    break;
+  // zet, if we meet unmatched '}', should be a st-lang error
+  //case '}':
+  //  Kind = tok::r_brace;
+  //  break;
   case '.':
     Char = getCharAndSize(CurPtr, SizeTmp);
     if (Char >= '0' && Char <= '9') {
@@ -3325,6 +3337,8 @@ LexNextToken:
       Kind = tok::unknown;
     break;
 
+  // zet
+  case '}':
   case '\\':
     // FIXME: UCN's.
     // FALL THROUGH.

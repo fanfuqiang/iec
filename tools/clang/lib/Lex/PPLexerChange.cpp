@@ -101,6 +101,7 @@ void Preprocessor::EnterSourceFile(FileID FID, const DirectoryLookup *CurDir,
         CodeCompletionFileLoc.getLocWithOffset(CodeCompletionOffset);
   }
 
+  // zet, creat a new Lexer, CurLexer and CurPPLexer will set in this function
   EnterSourceFileWithLexer(new Lexer(FID, InputFile, *this), CurDir);
   return;
 }
