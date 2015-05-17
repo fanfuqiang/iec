@@ -222,14 +222,26 @@ PUNCTUATOR(greatergreatergreater, ">>>")
 //   KEYIEC   - This is a keyword for iec61131
 //
 KEYWORD(auto                        , KEYALL)
+// zet
+KEYWORD(bool                        , KEYALL)
 KEYWORD(break                       , KEYALL)
+// zet
+KEYWORD(byte                        , KEYALL)
 KEYWORD(case                        , KEYALL)
 KEYWORD(char                        , KEYALL)
 KEYWORD(const                       , KEYALL)
 KEYWORD(continue                    , KEYALL)
+// zet
+KEYWORD(date                        , KEYALL)
+KEYWORD(date_and_time               , KEYALL)
+ALIAS("dt"     , date_and_time      , KEYALL)
 KEYWORD(default                     , KEYALL)
+// zet
+KEYWORD(dint                        , KEYALL)
 KEYWORD(do                          , KEYALL)
 KEYWORD(double                      , KEYALL)
+// zet
+KEYWORD(dword                       , KEYALL)
 KEYWORD(else                        , KEYALL)
 // zet
 KEYWORD(elsif                       , KEYALL)
@@ -248,30 +260,53 @@ KEYWORD(goto                        , KEYALL)
 KEYWORD(if                          , KEYALL)
 KEYWORD(inline                      , KEYC99|KEYCXX|KEYGNU)
 KEYWORD(int                         , KEYALL)
+// zet
+KEYWORD(lint                        , KEYALL)
 KEYWORD(long                        , KEYALL)
+KEYWORD(lreal                       , KEYALL)
+KEYWORD(lword                       , KEYALL)
 // zet
 KEYWORD(of                          , KEYALL)
 KEYWORD(register                    , KEYALL)
 // zet
+KEYWORD(real                        , KEYALL)
 KEYWORD(repeat                      , KEYALL)
 KEYWORD(restrict                    , KEYC99)
 KEYWORD(return                      , KEYALL)
 KEYWORD(short                       , KEYALL)
 KEYWORD(signed                      , KEYALL)
+// zet
+KEYWORD(sint                        , KEYALL)
 KEYWORD(sizeof                      , KEYALL)
 KEYWORD(static                      , KEYALL)
+// zet
+KEYWORD(string                      , KEYALL)
 KEYWORD(struct                      , KEYALL)
 KEYWORD(switch                      , KEYALL)
 // zet
 KEYWORD(then                        , KEYALL)
+KEYWORD(time                        , KEYALL)
+KEYWORD(time_of_day                 , KEYALL)
+ALIAS("tod"     , time_of_day       , KEYALL)
+//KEYWORD(tod                         , KEYALL)
 KEYWORD(typedef                     , KEYALL)
+// zet
+KEYWORD(udint                       , KEYALL)
+KEYWORD(uint                        , KEYALL)
+KEYWORD(ulint                       , KEYALL)
 KEYWORD(union                       , KEYALL)
 // zet
 KEYWORD(until                       , KEYALL)
 KEYWORD(unsigned                    , KEYALL)
+// zet
+KEYWORD(usint                       , KEYALL)
 KEYWORD(void                        , KEYALL)
 KEYWORD(volatile                    , KEYALL)
 KEYWORD(while                       , KEYALL)
+// zet
+KEYWORD(word                        , KEYALL)
+// zet
+KEYWORD(wstring                     , KEYALL)
 KEYWORD(_Alignas                    , KEYALL)
 KEYWORD(_Alignof                    , KEYALL)
 KEYWORD(_Atomic                     , KEYALL)
@@ -287,7 +322,8 @@ KEYWORD(__objc_no                   , KEYALL)
 
 // C++ 2.11p1: Keywords.
 KEYWORD(asm                         , KEYCXX|KEYGNU)
-KEYWORD(bool                        , BOOLSUPPORT|KEYALTIVEC)
+// zet
+//KEYWORD(bool                        , BOOLSUPPORT|KEYALTIVEC)
 KEYWORD(catch                       , KEYCXX)
 KEYWORD(class                       , KEYCXX)
 KEYWORD(const_cast                  , KEYCXX)

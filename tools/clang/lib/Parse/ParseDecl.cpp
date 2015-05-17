@@ -2482,7 +2482,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     //  goto DoneWithDeclSpec;
 
       // typedef-name
-    case tok::kw_decltype:
+    //case tok::kw_decltype:
     case tok::identifier: {
       // In C++, check to see if this is a scope specifier like foo::bar::, if
       // so handle it as such.  This is important for ctor parsing.
@@ -2524,10 +2524,10 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
       // If we're in a context where the identifier could be a class name,
       // check whether this is a constructor declaration.
-      if (getLangOpts().CPlusPlus && DSContext == DSC_class &&
-          Actions.isCurrentClassName(*Tok.getIdentifierInfo(), getCurScope()) &&
-          isConstructorDeclarator())
-        goto DoneWithDeclSpec;
+      //if (getLangOpts().CPlusPlus && DSContext == DSC_class &&
+      //    Actions.isCurrentClassName(*Tok.getIdentifierInfo(), getCurScope()) &&
+      //    isConstructorDeclarator())
+      //  goto DoneWithDeclSpec;
 
       isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec,
                                      DiagID, TypeRep);
@@ -2540,8 +2540,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       // Objective-C supports syntax of the form 'id<proto1,proto2>' where 'id'
       // is a specific typedef and 'itf<proto1,proto2>' where 'itf' is an
       // Objective-C interface.
-      if (Tok.is(tok::less) && getLangOpts().ObjC1)
-        ParseObjCProtocolQualifiers(DS);
+      //if (Tok.is(tok::less) && getLangOpts().ObjC1)
+      //  ParseObjCProtocolQualifiers(DS);
 
       // Need to support trailing type qualifiers (e.g. "id<p> const").
       // If a type specifier follows, it will be diagnosed elsewhere.
@@ -2549,75 +2549,75 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     }
 
       // type-name
-    case tok::annot_template_id: {
-      TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
-      if (TemplateId->Kind != TNK_Type_template) {
-        // This template-id does not refer to a type name, so we're
-        // done with the type-specifiers.
-        goto DoneWithDeclSpec;
-      }
+    //case tok::annot_template_id: {
+    //  TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
+    //  if (TemplateId->Kind != TNK_Type_template) {
+    //    // This template-id does not refer to a type name, so we're
+    //    // done with the type-specifiers.
+    //    goto DoneWithDeclSpec;
+    //  }
 
-      // If we're in a context where the template-id could be a
-      // constructor name or specialization, check whether this is a
-      // constructor declaration.
-      if (getLangOpts().CPlusPlus && DSContext == DSC_class &&
-          Actions.isCurrentClassName(*TemplateId->Name, getCurScope()) &&
-          isConstructorDeclarator())
-        goto DoneWithDeclSpec;
+    //  // If we're in a context where the template-id could be a
+    //  // constructor name or specialization, check whether this is a
+    //  // constructor declaration.
+    //  if (getLangOpts().CPlusPlus && DSContext == DSC_class &&
+    //      Actions.isCurrentClassName(*TemplateId->Name, getCurScope()) &&
+    //      isConstructorDeclarator())
+    //    goto DoneWithDeclSpec;
 
-      // Turn the template-id annotation token into a type annotation
-      // token, then try again to parse it as a type-specifier.
-      AnnotateTemplateIdTokenAsType();
-      continue;
-    }
+    //  // Turn the template-id annotation token into a type annotation
+    //  // token, then try again to parse it as a type-specifier.
+    //  AnnotateTemplateIdTokenAsType();
+    //  continue;
+    //}
 
-    // GNU attributes support.
-    case tok::kw___attribute:
-      ParseGNUAttributes(DS.getAttributes(), 0, LateAttrs);
-      continue;
+    //// GNU attributes support.
+    //case tok::kw___attribute:
+    //  ParseGNUAttributes(DS.getAttributes(), 0, LateAttrs);
+    //  continue;
 
-    // Microsoft declspec support.
-    case tok::kw___declspec:
-      ParseMicrosoftDeclSpec(DS.getAttributes());
-      continue;
+    //// Microsoft declspec support.
+    //case tok::kw___declspec:
+    //  ParseMicrosoftDeclSpec(DS.getAttributes());
+    //  continue;
 
-    // Microsoft single token adornments.
-    case tok::kw___forceinline: {
-      isInvalid = DS.SetFunctionSpecInline(Loc, PrevSpec, DiagID);
-      IdentifierInfo *AttrName = Tok.getIdentifierInfo();
-      SourceLocation AttrNameLoc = Tok.getLocation();
-      // FIXME: This does not work correctly if it is set to be a declspec
-      //        attribute, and a GNU attribute is simply incorrect.
-      DS.getAttributes().addNew(AttrName, AttrNameLoc, 0, AttrNameLoc, 0,
-                                SourceLocation(), 0, 0, AttributeList::AS_GNU);
-      break;
-    }
+    //// Microsoft single token adornments.
+    //case tok::kw___forceinline: {
+    //  isInvalid = DS.SetFunctionSpecInline(Loc, PrevSpec, DiagID);
+    //  IdentifierInfo *AttrName = Tok.getIdentifierInfo();
+    //  SourceLocation AttrNameLoc = Tok.getLocation();
+    //  // FIXME: This does not work correctly if it is set to be a declspec
+    //  //        attribute, and a GNU attribute is simply incorrect.
+    //  DS.getAttributes().addNew(AttrName, AttrNameLoc, 0, AttrNameLoc, 0,
+    //                            SourceLocation(), 0, 0, AttributeList::AS_GNU);
+    //  break;
+    //}
 
-    case tok::kw___ptr64:
-    case tok::kw___ptr32:
-    case tok::kw___w64:
-    case tok::kw___cdecl:
-    case tok::kw___stdcall:
-    case tok::kw___fastcall:
-    case tok::kw___thiscall:
-    case tok::kw___unaligned:
-      ParseMicrosoftTypeAttributes(DS.getAttributes());
-      continue;
+    //case tok::kw___ptr64:
+    //case tok::kw___ptr32:
+    //case tok::kw___w64:
+    //case tok::kw___cdecl:
+    //case tok::kw___stdcall:
+    //case tok::kw___fastcall:
+    //case tok::kw___thiscall:
+    //case tok::kw___unaligned:
+    //  ParseMicrosoftTypeAttributes(DS.getAttributes());
+    //  continue;
 
-    // Borland single token adornments.
-    case tok::kw___pascal:
-      ParseBorlandTypeAttributes(DS.getAttributes());
-      continue;
+    //// Borland single token adornments.
+    //case tok::kw___pascal:
+    //  ParseBorlandTypeAttributes(DS.getAttributes());
+    //  continue;
 
-    // OpenCL single token adornments.
-    case tok::kw___kernel:
-      ParseOpenCLAttributes(DS.getAttributes());
-      continue;
+    //// OpenCL single token adornments.
+    //case tok::kw___kernel:
+    //  ParseOpenCLAttributes(DS.getAttributes());
+    //  continue;
 
     // storage-class-specifier
     case tok::kw_typedef:
     // iec data type declaration, iec has a total contrary declaration list
-    case tok::kw_type:
+    //case tok::kw_type:
       isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_typedef, Loc,
                                          PrevSpec, DiagID);
       break;
@@ -2791,7 +2791,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
                                        DiagID);
       }
       break;
-    // iec basic types 
+    // st-lang basic types 
     case tok::kw_sint:
       // TODO: TST_sint or TST_char? sizeof(sint) is 8 
       isInvalid = DS.SetTypeSpecType(DeclSpec::TST_sint, Loc, PrevSpec, DiagID) 
@@ -2854,24 +2854,20 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       isInvalid = DS.SetTypeSpecType(DeclSpec::TST_time, Loc, PrevSpec,
                                      DiagID);
       break;
-    case tok::kw_data:
+    case tok::kw_date:
       isInvalid = DS.SetTypeSpecType(DeclSpec::TST_data, Loc, PrevSpec,
                                      DiagID);
       break;
+    // zet
+    //case tok::kw_tod:
+    // AddKeyword(StringRef("tod"), kw_time_of_day, ...);
     case tok::kw_time_of_day:
       isInvalid = DS.SetTypeSpecType(DeclSpec::TST_time_of_day, Loc, PrevSpec,
                                      DiagID);
       break;
-    case tok::kw_tod:
-      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_tod, Loc, PrevSpec,
-                                     DiagID);
-      break;
-    case tok::kw_data_and_time:
+    //case tok::kw_dt:
+    case tok::kw_date_and_time:
       isInvalid = DS.SetTypeSpecType(DeclSpec::TST_data_and_time, Loc, PrevSpec,
-                                     DiagID);
-      break;
-    case tok::kw_dt:
-      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_dt, Loc, PrevSpec,
                                      DiagID);
       break;
     case tok::kw_string:
@@ -2933,7 +2929,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::kw_struct:
     case tok::kw___interface:
     case tok::kw_union:
-    // iec type define
+    // st-lang type define
     case tok::kw_type: {
       tok::TokenKind Kind = Tok.getKind(); // this value is enumrator: kw_type
       ConsumeToken();

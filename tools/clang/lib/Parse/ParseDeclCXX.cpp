@@ -1064,12 +1064,12 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     assert(TagTokKind == tok::kw_union && "Not a class specifier");
     TagType = DeclSpec::TST_union;
   }
-#if 0
-  if (Tok.is(tok::code_completion)) {
-    // Code completion for a struct, class, or union name.
-    Actions.CodeCompleteTag(getCurScope(), TagType);
-    return cutOffParsing();
-  }
+  // zet
+  //if (Tok.is(tok::code_completion)) {
+  //  // Code completion for a struct, class, or union name.
+  //  Actions.CodeCompleteTag(getCurScope(), TagType);
+  //  return cutOffParsing();
+  //}
 
   // C++03 [temp.explicit] 14.7.2/8:
   //   The usual access checking rules do not apply to names used to specify
@@ -1088,67 +1088,67 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
 
   ParsedAttributesWithRange attrs(AttrFactory);
   // If attributes exist after tag, parse them.
-  if (Tok.is(tok::kw___attribute))
-    ParseGNUAttributes(attrs);
+  //if (Tok.is(tok::kw___attribute))
+  //  ParseGNUAttributes(attrs);
 
-  // If declspecs exist after tag, parse them.
-  while (Tok.is(tok::kw___declspec))
-    ParseMicrosoftDeclSpec(attrs);
+  //// If declspecs exist after tag, parse them.
+  //while (Tok.is(tok::kw___declspec))
+  //  ParseMicrosoftDeclSpec(attrs);
 
-  // Parse inheritance specifiers.
-  if (Tok.is(tok::kw___single_inheritance) ||
-      Tok.is(tok::kw___multiple_inheritance) ||
-      Tok.is(tok::kw___virtual_inheritance))
-      ParseMicrosoftInheritanceClassAttributes(attrs);
+  //// Parse inheritance specifiers.
+  //if (Tok.is(tok::kw___single_inheritance) ||
+  //    Tok.is(tok::kw___multiple_inheritance) ||
+  //    Tok.is(tok::kw___virtual_inheritance))
+  //    ParseMicrosoftInheritanceClassAttributes(attrs);
 
   // If C++0x attributes exist here, parse them.
   // FIXME: Are we consistent with the ordering of parsing of different
   // styles of attributes?
-  MaybeParseCXX0XAttributes(attrs);
+  //MaybeParseCXX0XAttributes(attrs);
 
-  if (TagType == DeclSpec::TST_struct &&
-      !Tok.is(tok::identifier) &&
-      Tok.getIdentifierInfo() &&
-      (Tok.is(tok::kw___is_arithmetic) ||
-       Tok.is(tok::kw___is_convertible) ||
-       Tok.is(tok::kw___is_empty) ||
-       Tok.is(tok::kw___is_floating_point) ||
-       Tok.is(tok::kw___is_function) ||
-       Tok.is(tok::kw___is_fundamental) ||
-       Tok.is(tok::kw___is_integral) ||
-       Tok.is(tok::kw___is_member_function_pointer) ||
-       Tok.is(tok::kw___is_member_pointer) ||
-       Tok.is(tok::kw___is_pod) ||
-       Tok.is(tok::kw___is_pointer) ||
-       Tok.is(tok::kw___is_same) ||
-       Tok.is(tok::kw___is_scalar) ||
-       Tok.is(tok::kw___is_signed) ||
-       Tok.is(tok::kw___is_unsigned) ||
-       Tok.is(tok::kw___is_void))) {
-    // GNU libstdc++ 4.2 and libc++ use certain intrinsic names as the
-    // name of struct templates, but some are keywords in GCC >= 4.3
-    // and Clang. Therefore, when we see the token sequence "struct
-    // X", make X into a normal identifier rather than a keyword, to
-    // allow libstdc++ 4.2 and libc++ to work properly.
-    Tok.getIdentifierInfo()->RevertTokenIDToIdentifier();
-    Tok.setKind(tok::identifier);
-  }
+  //if (TagType == DeclSpec::TST_struct &&
+  //    !Tok.is(tok::identifier) &&
+  //    Tok.getIdentifierInfo() &&
+  //    (Tok.is(tok::kw___is_arithmetic) ||
+  //     Tok.is(tok::kw___is_convertible) ||
+  //     Tok.is(tok::kw___is_empty) ||
+  //     Tok.is(tok::kw___is_floating_point) ||
+  //     Tok.is(tok::kw___is_function) ||
+  //     Tok.is(tok::kw___is_fundamental) ||
+  //     Tok.is(tok::kw___is_integral) ||
+  //     Tok.is(tok::kw___is_member_function_pointer) ||
+  //     Tok.is(tok::kw___is_member_pointer) ||
+  //     Tok.is(tok::kw___is_pod) ||
+  //     Tok.is(tok::kw___is_pointer) ||
+  //     Tok.is(tok::kw___is_same) ||
+  //     Tok.is(tok::kw___is_scalar) ||
+  //     Tok.is(tok::kw___is_signed) ||
+  //     Tok.is(tok::kw___is_unsigned) ||
+  //     Tok.is(tok::kw___is_void))) {
+  //  // GNU libstdc++ 4.2 and libc++ use certain intrinsic names as the
+  //  // name of struct templates, but some are keywords in GCC >= 4.3
+  //  // and Clang. Therefore, when we see the token sequence "struct
+  //  // X", make X into a normal identifier rather than a keyword, to
+  //  // allow libstdc++ 4.2 and libc++ to work properly.
+  //  Tok.getIdentifierInfo()->RevertTokenIDToIdentifier();
+  //  Tok.setKind(tok::identifier);
+  //}
 
   // Parse the (optional) nested-name-specifier.
   CXXScopeSpec &SS = DS.getTypeSpecScope();
-  if (getLangOpts().CPlusPlus) {
-    // "FOO : BAR" is not a potential typo for "FOO::BAR".
-    ColonProtectionRAIIObject X(*this);
+  //if (getLangOpts().CPlusPlus) {
+  //  // "FOO : BAR" is not a potential typo for "FOO::BAR".
+  //  ColonProtectionRAIIObject X(*this);
 
-    if (ParseOptionalCXXScopeSpecifier(SS, ParsedType(), EnteringContext))
-      DS.SetTypeSpecError();
-    if (SS.isSet())
-      if (Tok.isNot(tok::identifier) && Tok.isNot(tok::annot_template_id))
-        Diag(Tok, diag::err_expected_ident);
-  }
+  //  if (ParseOptionalCXXScopeSpecifier(SS, ParsedType(), EnteringContext))
+  //    DS.SetTypeSpecError();
+  //  if (SS.isSet())
+  //    if (Tok.isNot(tok::identifier) && Tok.isNot(tok::annot_template_id))
+  //      Diag(Tok, diag::err_expected_ident);
+  //}
 
   TemplateParameterLists *TemplateParams = TemplateInfo.TemplateParams;
-#endif 
+
   // Parse the (optional) class name or simple-template-id.
   IdentifierInfo *Name = 0;
   SourceLocation NameLoc;
@@ -1156,7 +1156,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   if (Tok.is(tok::identifier)) {
     Name = Tok.getIdentifierInfo();
     NameLoc = ConsumeToken();
-#if 0
+
     if (Tok.is(tok::less) && getLangOpts().CPlusPlus) {
       // The name was supposed to refer to a template, but didn't.
       // Eat the template argument list and try to continue parsing this as
@@ -1202,7 +1202,6 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           = SourceLocation();
       }
     }
-#endif
   } else if (Tok.is(tok::annot_template_id)) {
     TemplateId = takeTemplateIdAnnotation(Tok);
     NameLoc = ConsumeToken();
@@ -1244,7 +1243,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   Sema::TagUseKind TUK;
   // this musy be a data type definition in iec 
   TUK = Sema::TUK_Definition;
-#if 0
+
   if (DSC == DSC_trailing)
     TUK = Sema::TUK_Reference;
   else if (Tok.is(tok::l_brace) ||
@@ -1278,7 +1277,6 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     }
   } else
     TUK = Sema::TUK_Reference;
-#endif
   // If this is an elaborated type specifier, and we delayed
   // diagnostics before, just merge them into the current pool.
   if (shouldDelayDiagsInTag) {
