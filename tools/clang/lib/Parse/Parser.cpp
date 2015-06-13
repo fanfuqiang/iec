@@ -653,87 +653,13 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
   Decl *SingleDecl = 0;
   switch (Tok.getKind()) {
   // zet
-  //case tok::annot_pragma_vis:
-  //  HandlePragmaVisibility();
-  //  return DeclGroupPtrTy();
-  //case tok::annot_pragma_pack:
-  //  HandlePragmaPack();
-  //  return DeclGroupPtrTy();
-  //case tok::annot_pragma_msstruct:
-  //  HandlePragmaMSStruct();
-  //  return DeclGroupPtrTy();
-  //case tok::annot_pragma_align:
-  //  HandlePragmaAlign();
-  //  return DeclGroupPtrTy();
-  //case tok::annot_pragma_weak:
-  //  HandlePragmaWeak();
-  //  return DeclGroupPtrTy();
-  //case tok::annot_pragma_weakalias:
-  //  HandlePragmaWeakAlias();
-  //  return DeclGroupPtrTy();
-  //case tok::annot_pragma_redefine_extname:
-  //  HandlePragmaRedefineExtname();
-  //  return DeclGroupPtrTy();
-  //case tok::annot_pragma_fp_contract:
-  //  HandlePragmaFPContract();
-  //  return DeclGroupPtrTy();
-  //case tok::annot_pragma_opencl_extension:
-  //  HandlePragmaOpenCLExtension();
-  //  return DeclGroupPtrTy();
-  //case tok::semi:
-  //  ConsumeExtraSemi(OutsideFunction);
-  //  // TODO: Invoke action for top-level semicolon.
-  //  return DeclGroupPtrTy();
-  //case tok::r_brace:
-  //  Diag(Tok, diag::err_extraneous_closing_brace);
-  //  ConsumeBrace();
-  //  return DeclGroupPtrTy();
-    // zet, well empty source will be caught here 
-  case tok::eof:
-    Diag(Tok, diag::err_expected_external_declaration);
-    return DeclGroupPtrTy();
-  //case tok::kw___extension__: {
-  //  // __extension__ silences extension warnings in the subexpression.
-  //  ExtensionRAIIObject O(Diags);  // Use RAII to do this.
-  //  ConsumeToken();
-  //  return ParseExternalDeclaration(attrs);
-  //}
-  //case tok::kw_asm: {
-  //  ProhibitAttributes(attrs);
-
-  //  SourceLocation StartLoc = Tok.getLocation();
-  //  SourceLocation EndLoc;
-  //  ExprResult Result(ParseSimpleAsm(&EndLoc));
-
-  //  ExpectAndConsume(tok::semi, diag::err_expected_semi_after,
-  //                   "top-level asm block");
-
-  //  if (Result.isInvalid())
-  //    return DeclGroupPtrTy();
-  //  SingleDecl = Actions.ActOnFileScopeAsmDecl(Result.get(), StartLoc, EndLoc);
-  //  break;
-  //}
-  //case tok::at:
-  //  return ParseObjCAtDirectives();
-  //case tok::minus:
-  //case tok::plus:
-  //  if (!getLangOpts().ObjC1) {
-  //    Diag(Tok, diag::err_expected_external_declaration);
-  //    ConsumeToken();
-  //    return DeclGroupPtrTy();
-  //  }
-  //  SingleDecl = ParseObjCMethodDefinition();
-  //  break;
-  //case tok::code_completion:
-  //    Actions.CodeCompleteOrdinaryName(getCurScope(), 
-  //                           CurParsedObjCImpl? Sema::PCC_ObjCImplementation
-  //                                            : Sema::PCC_Namespace);
-  //  cutOffParsing();
-  //  return DeclGroupPtrTy();
-
-  // zet
     // function_declaration
   case tok::kw_function:
+    if (DS) {
+      return ParseDeclarationOrFunctionDefinition(attrs, DS);
+    } else {
+      return ParseDeclarationOrFunctionDefinition(attrs);
+    }
     // function_block_declaration
   case tok::kw_function_block:
     // program_declaration
@@ -742,84 +668,17 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
   case tok::kw_configuration:
     // data_type_declaration
   case tok::kw_type:
-  //case tok::kw_using:
-  //case tok::kw_namespace:
-  //case tok::kw_typedef:
-  //case tok::kw_template:
-  //case tok::kw_export:    // As in 'export template'
-  //case tok::kw_static_assert:
-  //case tok::kw__Static_assert:
     // A function definition cannot start with any of these keywords.
     {
       SourceLocation DeclEnd;
       StmtVector Stmts;
       return ParseDeclaration(Stmts, Declarator::FileContext, DeclEnd, attrs);
     }
-
-  //case tok::kw_static:
-  //  // Parse (then ignore) 'static' prior to a template instantiation. This is
-  //  // a GCC extension that we intentionally do not support.
-  //  if (getLangOpts().CPlusPlus && NextToken().is(tok::kw_template)) {
-  //    Diag(ConsumeToken(), diag::warn_static_inline_explicit_inst_ignored)
-  //      << 0;
-  //    SourceLocation DeclEnd;
-  //    StmtVector Stmts;
-  //    return ParseDeclaration(Stmts, Declarator::FileContext, DeclEnd, attrs);  
-  //  }
-  //  goto dont_know;
-  //    
-  //case tok::kw_inline:
-  //  if (getLangOpts().CPlusPlus) {
-  //    tok::TokenKind NextKind = NextToken().getKind();
-  //    
-  //    // Inline namespaces. Allowed as an extension even in C++03.
-  //    if (NextKind == tok::kw_namespace) {
-  //      SourceLocation DeclEnd;
-  //      StmtVector Stmts;
-  //      return ParseDeclaration(Stmts, Declarator::FileContext, DeclEnd, attrs);
-  //    }
-  //    
-  //    // Parse (then ignore) 'inline' prior to a template instantiation. This is
-  //    // a GCC extension that we intentionally do not support.
-  //    if (NextKind == tok::kw_template) {
-  //      Diag(ConsumeToken(), diag::warn_static_inline_explicit_inst_ignored)
-  //        << 1;
-  //      SourceLocation DeclEnd;
-  //      StmtVector Stmts;
-  //      return ParseDeclaration(Stmts, Declarator::FileContext, DeclEnd, attrs);  
-  //    }
-  //  }
-  //  goto dont_know;
-
-  //case tok::kw_extern:
-  //  if (getLangOpts().CPlusPlus && NextToken().is(tok::kw_template)) {
-  //    // Extern templates
-  //    SourceLocation ExternLoc = ConsumeToken();
-  //    SourceLocation TemplateLoc = ConsumeToken();
-  //    Diag(ExternLoc, getLangOpts().CPlusPlus0x ?
-  //           diag::warn_cxx98_compat_extern_template :
-  //           diag::ext_extern_template) << SourceRange(ExternLoc, TemplateLoc);
-  //    SourceLocation DeclEnd;
-  //    return Actions.ConvertDeclToDeclGroup(
-  //                ParseExplicitInstantiation(Declarator::FileContext,
-  //                                           ExternLoc, TemplateLoc, DeclEnd));
-  //  }
-  //  // FIXME: Detect C++ linkage specifications here?
-  //  goto dont_know;
-
-  //case tok::kw___if_exists:
-  //case tok::kw___if_not_exists:
-  //  ParseMicrosoftIfExistsExternalDeclaration();
-  //  return DeclGroupPtrTy();
-      
+      // zet, well empty source will be caught here 
+  case tok::eof:
   default:
-  dont_know:
-    // We can't tell whether this is a function-definition or declaration yet.
-    if (DS) {
-      return ParseDeclarationOrFunctionDefinition(attrs, DS);
-    } else {
-      return ParseDeclarationOrFunctionDefinition(attrs);
-    }
+    Diag(Tok, diag::err_expected_external_declaration);
+    return DeclGroupPtrTy();
   }
 
   // This routine returns a DeclGroup, if the thing we parsed only contains a
