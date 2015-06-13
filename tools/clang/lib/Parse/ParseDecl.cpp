@@ -1481,7 +1481,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     SkipMalformedDecl();
     return DeclGroupPtrTy();
   }
-#if 0
+
   // Save late-parsed attributes for now; they need to be parsed in the
   // appropriate function scope after the function Decl has been constructed.
   // These will be parsed in ParseFunctionDefinition or ParseLexedAttrList.
@@ -1540,7 +1540,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     D.complete(ThisDecl);
     return Actions.FinalizeDeclaratorGroup(getCurScope(), DS, &ThisDecl, 1);
   }
-#endif
+
   SmallVector<Decl *, 8> DeclsInGroup;
   Decl *FirstDecl = ParseDeclarationAfterDeclaratorAndAttributes(D);
  // if (LateParsedAttrs.size() > 0)
@@ -1664,8 +1664,9 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(Declarator &D,
                                      const ParsedTemplateInfo &TemplateInfo) {
   // Inform the current actions module that we just parsed this declarator.
   Decl *ThisDecl = 0;
-#if 0
+
   switch (TemplateInfo.Kind) {
+  // zet, must be here for st-lang 
   case ParsedTemplateInfo::NonTemplate:
     ThisDecl = Actions.ActOnDeclarator(getCurScope(), D);
     break;
@@ -1692,7 +1693,6 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(Declarator &D,
     break;
     }
   }
-#endif
 
   bool TypeContainsAuto =
     D.getDeclSpec().getTypeSpecType() == DeclSpec::TST_auto;
@@ -4280,7 +4280,7 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
                                      DirectDeclParseFunction DirectDeclParser) {
   if (Diags.hasAllExtensionsSilenced())
     D.setExtension();
-#if 0
+
   // C++ member pointers start with a '::' or a nested-name.
   // Member pointers get special handling, since there's no place for the
   // scope spec in the generic path below.
@@ -4319,7 +4319,7 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
       return;
     }
   }
-#endif
+
   tok::TokenKind Kind = Tok.getKind();
   // Not a pointer, C++ reference, or block.
   // this must be a identifier in iec61131

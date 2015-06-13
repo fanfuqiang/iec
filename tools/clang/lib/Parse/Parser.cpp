@@ -560,6 +560,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
 
   // Skip over the EOF token, flagging end of previous input for incremental 
   // processing
+  // zet, IncrementalProcessing  maybe useable for st-lang
   if (PP.isIncrementalProcessingEnabled() && Tok.is(tok::eof))
     ConsumeToken();
 
@@ -639,6 +640,7 @@ void Parser::ParseTranslationUnit() {
 Parser::DeclGroupPtrTy
 Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
                                  ParsingDeclSpec *DS) {
+  // zet, DS is nullptr;
   DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(TemplateIds);
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 

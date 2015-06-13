@@ -84,13 +84,15 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
   // complain if we have a precompiled header, although technically if the PCH
   // is empty we should still emit the (pedantic) diagnostic.
   Parser::DeclGroupPtrTy ADecl;
-  ExternalASTSource *External = S.getASTContext().getExternalSource();
-  if (External)
-    External->StartTranslationUnit(Consumer);
-
+  // zet, we dont need ExternalASTSource in st-lang
+  //ExternalASTSource *External = S.getASTContext().getExternalSource();
+  //if (External)
+  //  External->StartTranslationUnit(Consumer);
+  // zet, ParseTopLevelDecl() return ture when encounter EOF
   if (P.ParseTopLevelDecl(ADecl)) {
-    if (!External && !S.getLangOpts().CPlusPlus)
-      P.Diag(diag::ext_empty_translation_unit);
+    // zet, should do this? when compile a empty file 
+    //if (/*!External && */ !S.getLangOpts().CPlusPlus)
+    P.Diag(diag::ext_empty_translation_unit);
   } else {
     do {
       // If we got a null return and something *was* parsed, ignore it.  This
