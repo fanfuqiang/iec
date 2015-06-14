@@ -1174,32 +1174,6 @@ void Parser::ProhibitCXX11Attributes(ParsedAttributesWithRange &attrs) {
 ///     'TYPE' type_declaration ';'
 ///     {type_declaration ';'}
 ///     'END_TYPE'
-#if 0
-Parser::DeclGroupPtrTy Parser::ParseDeclaration(/* args*/) {
-  switch (Tok.getKind()) {
-    case tok::kw_type:
-      while (Tok.getKind() != tok::kw_end_type) {
-        // some inits
-        ;
-        ParseTypeDeclaration(/* args*/);
-      }
-      break;
-    case tok::kw_xxx:
-      ;
-      break;
-  }
-}
-///type_declaration ::= single_element_type_declaration
-///  | array_type_declaration
-///  | structure_type_declaration
-///  | string_type_declaration
-///
-//retType Parser::ParseTypeDeclaration(/* parameters*/) {
-  // TODO: array, struct, string
-  // TODO: need more detials need more code reading
-
-}
-#endif
 ///
 Parser::DeclGroupPtrTy Parser::ParseDeclaration(StmtVector &Stmts,
                                                 unsigned Context,
@@ -1211,43 +1185,6 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(StmtVector &Stmts,
   // zet
   //ObjCDeclContextSwitch ObjCDC(*this);
 
-  //Decl *SingleDecl = 0;
-  //Decl *OwnedType = 0;
-
-#if 0
-  switch (Tok.getKind()) {
-  case tok::kw_template:
-  case tok::kw_export:
-    ProhibitAttributes(attrs);
-    SingleDecl = ParseDeclarationStartingWithTemplate(Context, DeclEnd);
-    break;
-  case tok::kw_inline:
-    // Could be the start of an inline namespace. Allowed as an ext in C++03.
-    if (getLangOpts().CPlusPlus && NextToken().is(tok::kw_namespace)) {
-      ProhibitAttributes(attrs);
-      SourceLocation InlineLoc = ConsumeToken();
-      SingleDecl = ParseNamespace(Context, DeclEnd, InlineLoc);
-      break;
-    }
-    return ParseSimpleDeclaration(Stmts, Context, DeclEnd, attrs,
-                                  true);
-  case tok::kw_namespace:
-    ProhibitAttributes(attrs);
-    SingleDecl = ParseNamespace(Context, DeclEnd);
-    break;
-  case tok::kw_using:
-    SingleDecl = ParseUsingDirectiveOrDeclaration(Context, ParsedTemplateInfo(),
-                                                  DeclEnd, attrs, &OwnedType);
-    break;
-  case tok::kw_static_assert:
-  case tok::kw__Static_assert:
-    ProhibitAttributes(attrs);
-    SingleDecl = ParseStaticAssertDeclaration(DeclEnd);
-    break;
-  default:
-    return ParseSimpleDeclaration(Stmts, Context, DeclEnd, attrs, true);
-  }
-#endif
   // zet, copy from above default statement 
   return ParseSimpleDeclaration(Stmts, Context, DeclEnd, attrs, true);
   // This routine returns a DeclGroup, if the thing we parsed only contains a
@@ -1289,15 +1226,8 @@ Parser::ParseSimpleDeclaration(StmtVector &Stmts, unsigned Context,
                                bool RequireSemi, ForRangeInit *FRI) {
   // Parse the common declaration-specifiers piece.
   ParsingDeclSpec DS(*this);
-  DS.takeAttributesFrom(attrs);
-  // zet, the configuration ?
-  // TODO: need a new member function parse configuration
-  //if (Tok.getKind() == tok::kw_configuration) {
-  //  // TODO:
-  //} else {
-  //  // TODO: error code
-  //  Diag(Tok, /* add error code?*/);
-  //}
+  // zet
+  //DS.takeAttributesFrom(attrs);
 
   ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS_none,
                              getDeclSpecContextFromDeclaratorContext(Context));

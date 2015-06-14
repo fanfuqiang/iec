@@ -655,11 +655,11 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
   // zet
     // function_declaration
   case tok::kw_function:
-    if (DS) {
-      return ParseDeclarationOrFunctionDefinition(attrs, DS);
-    } else {
-      return ParseDeclarationOrFunctionDefinition(attrs);
-    }
+    //if (DS) {
+    //  return ParseDeclarationOrFunctionDefinition(attrs, DS);
+    //} else {
+    //  return ParseDeclarationOrFunctionDefinition(attrs);
+    //}
     // function_block_declaration
   case tok::kw_function_block:
     // program_declaration
@@ -677,7 +677,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
       // zet, well empty source will be caught here 
   case tok::eof:
   default:
-    Diag(Tok, diag::err_expected_external_declaration);
+    Diag(Tok, diag::err_expected_library_element_declaration);
     return DeclGroupPtrTy();
   }
 
