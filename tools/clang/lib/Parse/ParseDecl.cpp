@@ -1170,11 +1170,6 @@ void Parser::ProhibitCXX11Attributes(ParsedAttributesWithRange &attrs) {
 /// [C++11/C11] static_assert-declaration
 ///         others... [FIXME]
 ///
-/// data_type_declaration ::=
-///     'TYPE' type_declaration ';'
-///     {type_declaration ';'}
-///     'END_TYPE'
-///
 Parser::DeclGroupPtrTy Parser::ParseDeclaration(StmtVector &Stmts,
                                                 unsigned Context,
                                                 SourceLocation &DeclEnd,
@@ -1182,16 +1177,65 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(StmtVector &Stmts,
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
   // Must temporarily exit the objective-c container scope for
   // parsing c none objective-c decls.
-  // zet
-  //ObjCDeclContextSwitch ObjCDC(*this);
+  ObjCDeclContextSwitch ObjCDC(*this);
 
-  // zet, copy from above default statement 
-  return ParseSimpleDeclaration(Stmts, Context, DeclEnd, attrs, true);
+  Decl *SingleDecl = 0;
+  Decl *OwnedType = 0;
+  switch (Tok.getKind()) {
+  case tok::kw_template:
+  case tok::kw_export:
+    ProhibitAttributes(attrs);
+    SingleDecl = ParseDeclarationStartingWithTemplate(Context, DeclEnd);
+    break;
+  case tok::kw_inline:
+    // Could be the start of an inline namespace. Allowed as an ext in C++03.
+    if (getLangOpts().CPlusPlus && NextToken().is(tok::kw_namespace)) {
+      ProhibitAttributes(attrs);
+      SourceLocation InlineLoc = ConsumeToken();
+      SingleDecl = ParseNamespace(Context, DeclEnd, InlineLoc);
+      break;
+    }
+    return ParseSimpleDeclaration(Stmts, Context, DeclEnd, attrs,
+                                  true);
+  case tok::kw_namespace:
+    ProhibitAttributes(attrs);
+    SingleDecl = ParseNamespace(Context, DeclEnd);
+    break;
+  case tok::kw_using:
+    SingleDecl = ParseUsingDirectiveOrDeclaration(Context, ParsedTemplateInfo(),
+                                                  DeclEnd, attrs, &OwnedType);
+    break;
+  case tok::kw_static_assert:
+  case tok::kw__Static_assert:
+    ProhibitAttributes(attrs);
+    SingleDecl = ParseStaticAssertDeclaration(DeclEnd);
+    break;
+  default:
+    return ParseSimpleDeclaration(Stmts, Context, DeclEnd, attrs, true);
+  }
+
   // This routine returns a DeclGroup, if the thing we parsed only contains a
   // single decl, convert it now. Alias declarations can also declare a type;
   // include that too if it is present.
-  // zet
-  //return Actions.ConvertDeclToDeclGroup(SingleDecl, OwnedType);
+  return Actions.ConvertDeclToDeclGroup(SingleDecl, OwnedType);
+}
+
+///
+/// data_type_declaration ::=
+///     'TYPE' type_declaration ';'
+///     {type_declaration ';'}
+///     'END_TYPE'
+///
+Parser::DeclGroupPtrTy Parser::ParseTypeDeclaration(unsigned Context,
+                                                SourceLocation &DeclEnd) {
+  ParenBraceBracketBalancer BalancerRAIIObj(*this);
+
+}
+///
+Parser::DeclGroupPtrTy Parser::ParsePOUDeclaration(unsigned Context,
+                                                SourceLocation &DeclEnd) {
+  ParenBraceBracketBalancer BalancerRAIIObj(*this);
+
 }
 
 ///       simple-declaration: [C99 6.7: declaration] [C++ 7p1: dcl.dcl]
@@ -1219,6 +1263,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(StmtVector &Stmts,
 ///     [access_declarations]
 ///     [instance_specific_initializations]
 ///   'END_RESOURCE'
+///
 Parser::DeclGroupPtrTy
 Parser::ParseSimpleDeclaration(StmtVector &Stmts, unsigned Context,
                                SourceLocation &DeclEnd,

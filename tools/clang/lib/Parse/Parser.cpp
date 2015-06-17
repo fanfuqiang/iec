@@ -572,9 +572,6 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
 
   Result = DeclGroupPtrTy();
   if (Tok.is(tok::eof)) {
-    // Late template parsing can begin.
-    if (getLangOpts().DelayedTemplateParsing)
-      Actions.SetLateTemplateParser(LateTemplateParserCallback, this);
     if (!PP.isIncrementalProcessingEnabled())
       Actions.ActOnEndOfTranslationUnit();
     //else don't tell Sema that we ended parsing: more input might come.
@@ -596,6 +593,8 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
 ///         external-declaration
 ///         translation-unit external-declaration
 void Parser::ParseTranslationUnit() {
+  // zet
+  assert(!"zet, calling ParseTranslationUnit ?");
   Initialize();
 
   DeclGroupPtrTy Res;
@@ -630,6 +629,13 @@ void Parser::ParseTranslationUnit() {
 ///           ';'
 /// [C++0x/GNU] 'extern' 'template' declaration
 ///
+Parser::DeclGroupPtrTy
+Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
+                                 ParsingDeclSpec *DS) {
+  assert(! "zet, ParseExternalDeclaration ?");
+}
+
+/// zet
 /// [st-lang] library_element_name ::= data_type_name | function_name
 ///                   | function_block_type_name | program_type_name
 ///                   | resource_type_name | configuration_name
@@ -638,54 +644,34 @@ void Parser::ParseTranslationUnit() {
 ///                   | program_declaration | configuration_declaration
 ///
 Parser::DeclGroupPtrTy
-Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
-                                 ParsingDeclSpec *DS) {
+Parser::ParseElementDeclaration(ParsingDeclSpec *DS) {
   // zet, DS is nullptr;
-  DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(TemplateIds);
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
-  if (PP.isCodeCompletionReached()) {
-    assert(!"zet, isCodeCompletionReached ?");
-    cutOffParsing();
-    return DeclGroupPtrTy();
-  }
-
-  Decl *SingleDecl = 0;
+  //Decl *SingleDecl = 0;
+  // shared by element declarations
+  SourceLocation DeclEnd;
   switch (Tok.getKind()) {
-  // zet
+    // configuration_declaration
+  case tok::kw_configuration:
+    assert(! "zet, configuration ?");
     // function_declaration
   case tok::kw_function:
-    //if (DS) {
-    //  return ParseDeclarationOrFunctionDefinition(attrs, DS);
-    //} else {
-    //  return ParseDeclarationOrFunctionDefinition(attrs);
-    //}
     // function_block_declaration
   case tok::kw_function_block:
     // program_declaration
   case tok::kw_program:
-    // configuration_declaration
-  case tok::kw_configuration:
-    // data_type_declaration
+    return ParsePOUDeclaration(Declarator::FileContext, DeclEnd);
+   // data_type_declaration 
   case tok::kw_type:
     // A function definition cannot start with any of these keywords.
-    {
-      SourceLocation DeclEnd;
-      StmtVector Stmts;
-      return ParseDeclaration(Stmts, Declarator::FileContext, DeclEnd, attrs);
-    }
+      return ParseTypeDeclaration(Declarator::FileContext, DeclEnd);
       // zet, well empty source will be caught here 
   case tok::eof:
   default:
     Diag(Tok, diag::err_expected_library_element_declaration);
     return DeclGroupPtrTy();
   }
-
-  // This routine returns a DeclGroup, if the thing we parsed only contains a
-  // single decl, convert it now.
-  // zet
-  assert(!"ParseExternalDeclaration() exit here ?");
-  return Actions.ConvertDeclToDeclGroup(SingleDecl);
 }
 
 /// \brief Determine whether the current token, if it occurs after a
