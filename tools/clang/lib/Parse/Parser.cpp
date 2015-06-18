@@ -556,35 +556,20 @@ namespace {
 /// ParseTopLevelDecl - Parse one top-level declaration, return whatever the
 /// action tells us to.  This returns true if the EOF was encountered.
 bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
-  DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(TemplateIds);
-
   // Skip over the EOF token, flagging end of previous input for incremental 
   // processing
   // zet, IncrementalProcessing  maybe useable for st-lang
   if (PP.isIncrementalProcessingEnabled() && Tok.is(tok::eof))
     ConsumeToken();
 
-  while (Tok.is(tok::annot_pragma_unused)) {
-    // zet
-    assert(!"annot_pragma_unused ?");
-    HandlePragmaUnused();
-  }
-
   Result = DeclGroupPtrTy();
   if (Tok.is(tok::eof)) {
     if (!PP.isIncrementalProcessingEnabled())
       Actions.ActOnEndOfTranslationUnit();
-    //else don't tell Sema that we ended parsing: more input might come.
-
     return true;
   }
 
-  ParsedAttributesWithRange attrs(AttrFactory);
-  // zet
-  //MaybeParseCXX0XAttributes(attrs);
-  //MaybeParseMicrosoftAttributes(attrs);
-
-  Result = ParseExternalDeclaration(attrs);
+  Result = ParseElementDeclaration();
   return false;
 }
 
@@ -644,11 +629,9 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
 ///                   | program_declaration | configuration_declaration
 ///
 Parser::DeclGroupPtrTy
-Parser::ParseElementDeclaration(ParsingDeclSpec *DS) {
-  // zet, DS is nullptr;
-  ParenBraceBracketBalancer BalancerRAIIObj(*this);
-
-  //Decl *SingleDecl = 0;
+Parser::ParseElementDeclaration() {
+  // 
+  Decl *SingleDecl = 0;
   // shared by element declarations
   SourceLocation DeclEnd;
   switch (Tok.getKind()) {

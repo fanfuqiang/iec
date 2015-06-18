@@ -1220,21 +1220,53 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(StmtVector &Stmts,
   return Actions.ConvertDeclToDeclGroup(SingleDecl, OwnedType);
 }
 
-///
 /// data_type_declaration ::=
-///     'TYPE' type_declaration ';'
-///     {type_declaration ';'}
-///     'END_TYPE'
+///     'type' type_declaration ';'
+///       { type_declaration ';'}
+///     'end_type'
+/// type_declaration ::= single_element_type_declaration
+///     | array_type_declaration | struct_type_declaration
+///     | string_type_declaration
 ///
 Parser::DeclGroupPtrTy Parser::ParseTypeDeclaration(unsigned Context,
                                                 SourceLocation &DeclEnd) {
-  ParenBraceBracketBalancer BalancerRAIIObj(*this);
+  assert(Tok.is(tok::kw_type) && "Not a keyword type!");
+  SourceLocation TypeLoc = ConsumeToken();  // eat the 'type'.
+  // must at least has one type declaration
+
+
+  // into next type declaration
+  while (Tok.is(tok::semi)) {
+  
+  }
+  // after type must be identifier in type declaration.
+  if (Tok.isNot(tok::identifier)) {
+    Diag(Tok, diag::err_expected_ident_after) << "TYPE";
+    return DeclGroupPtrTy();
+  }
+  ParsingDeclSpec DS(*this);
+  // Parse the common declaration-specifiers piece.
+  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS_none,
+                             getDeclSpecContextFromDeclaratorContext(Context));
+
+  // C99 6.7.2.3p6: Handle "struct-or-union identifier;", "enum { X };"
+  // declaration-specifiers init-declarator-list[opt] ';'
+  if (Tok.is(tok::semi)) {
+    DeclEnd = Tok.getLocation();
+    if (RequireSemi) ConsumeToken();
+    Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(getCurScope(), AS_none,
+                                                       DS);
+    DS.complete(TheDecl);
+    return Actions.ConvertDeclToDeclGroup(TheDecl);
+  }
+
+  return ParseDeclGroup(DS, Context, /*FunctionDefs=*/ false, &DeclEnd, FRI);
 
 }
+
 ///
 Parser::DeclGroupPtrTy Parser::ParsePOUDeclaration(unsigned Context,
                                                 SourceLocation &DeclEnd) {
-  ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
 }
 
@@ -1269,6 +1301,7 @@ Parser::ParseSimpleDeclaration(StmtVector &Stmts, unsigned Context,
                                SourceLocation &DeclEnd,
                                ParsedAttributesWithRange &attrs,
                                bool RequireSemi, ForRangeInit *FRI) {
+  assert(! "zet, ParseSimpleDeclaration ?");
   // Parse the common declaration-specifiers piece.
   ParsingDeclSpec DS(*this);
   // zet
@@ -1276,20 +1309,6 @@ Parser::ParseSimpleDeclaration(StmtVector &Stmts, unsigned Context,
 
   ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS_none,
                              getDeclSpecContextFromDeclaratorContext(Context));
-
-  // C99 6.7.2.3p6: Handle "struct-or-union identifier;", "enum { X };"
-  // declaration-specifiers init-declarator-list[opt] ';'
-#if 0
-  // this should illegal for iec 61131-3
-  if (Tok.is(tok::semi)) {
-    DeclEnd = Tok.getLocation();
-    if (RequireSemi) ConsumeToken();
-    Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(getCurScope(), AS_none,
-                                                       DS);
-    DS.complete(TheDecl);
-    return Actions.ConvertDeclToDeclGroup(TheDecl);
-  }
-#endif
 
   return ParseDeclGroup(DS, Context, /*FunctionDefs=*/ false, &DeclEnd, FRI);
 }
