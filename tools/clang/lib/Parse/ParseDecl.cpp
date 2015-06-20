@@ -1220,6 +1220,22 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(StmtVector &Stmts,
   return Actions.ConvertDeclToDeclGroup(SingleDecl, OwnedType);
 }
 
+/// { type_declaration ';' }+
+/// This routine will eat the ending ';'.
+///
+Decl *Parser::ParseTypeMemberDeclaration(SourceLocation &SemiLoc) {
+  // after type must be identifier in type declaration.
+  if (Tok.isNot(tok::identifier)) {
+    Diag(Tok, diag::err_expected_ident_in_type_declaration);
+    //return DeclGroupPtrTy();
+  }
+  // DeclSpec container
+  ParsingDeclSpec DS(*this);
+  //
+  ParsingDeclarator D(*this, DS, static_cast<Declarator::TheContext>(0));
+  Decl *FirstDecl = ParseDeclarationAfterDeclaratorAndAttributes(D);
+}
+
 /// data_type_declaration ::=
 ///     'type' type_declaration ';'
 ///       { type_declaration ';'}
@@ -1232,35 +1248,37 @@ Parser::DeclGroupPtrTy Parser::ParseTypeDeclaration(unsigned Context,
                                                 SourceLocation &DeclEnd) {
   assert(Tok.is(tok::kw_type) && "Not a keyword type!");
   SourceLocation TypeLoc = ConsumeToken();  // eat the 'type'.
-  // must at least has one type declaration
-
-
-  // into next type declaration
-  while (Tok.is(tok::semi)) {
   
-  }
-  // after type must be identifier in type declaration.
-  if (Tok.isNot(tok::identifier)) {
-    Diag(Tok, diag::err_expected_ident_after) << "TYPE";
+  Decl *TheDecl = 0;
+  //bool isSingleDecl = false;
+  // Must at least has one type declaration.
+  if (Tok.is(tok::kw_end_type)) {
+    // diag location correct ?
+    Diag(TypeLoc, diag::err_expected_type_declaration_member);
     return DeclGroupPtrTy();
   }
-  ParsingDeclSpec DS(*this);
-  // Parse the common declaration-specifiers piece.
-  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS_none,
-                             getDeclSpecContextFromDeclaratorContext(Context));
+  // If have more tha one type_declaration.
+  SmallVector<Decl *, 8> DeclsInGroup;
+  SourceLocation SemiLoc;
+  // { type_declaration ';' }+
+  while (Tok.isNot(tok::kw_end_type)) {
+    TheDecl = ParseTypeMemberDeclaration(SemiLoc);
+    if (Tok.is(tok::kw_end_type)) {
+      // Make sure only be change one time.
+      //if (! isSingleDecl)
+        //isSingleDecl = true;
+      break;
+    }
+    // Save single type declaration.
+    if (TheDecl)
+      DeclsInGroup.push_back(TheDecl);
 
-  // C99 6.7.2.3p6: Handle "struct-or-union identifier;", "enum { X };"
-  // declaration-specifiers init-declarator-list[opt] ';'
-  if (Tok.is(tok::semi)) {
-    DeclEnd = Tok.getLocation();
-    if (RequireSemi) ConsumeToken();
-    Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(getCurScope(), AS_none,
-                                                       DS);
-    DS.complete(TheDecl);
-    return Actions.ConvertDeclToDeclGroup(TheDecl);
+
   }
-
-  return ParseDeclGroup(DS, Context, /*FunctionDefs=*/ false, &DeclEnd, FRI);
+  DeclEnd = ConsumeToken(); // eat the 'end_type'
+  // Match the return type.
+  //if (isSingleDecl)
+    //return Actions.ConvertDeclToDeclGroup(TheDecl);
 
 }
 
@@ -1302,15 +1320,8 @@ Parser::ParseSimpleDeclaration(StmtVector &Stmts, unsigned Context,
                                ParsedAttributesWithRange &attrs,
                                bool RequireSemi, ForRangeInit *FRI) {
   assert(! "zet, ParseSimpleDeclaration ?");
-  // Parse the common declaration-specifiers piece.
-  ParsingDeclSpec DS(*this);
-  // zet
-  //DS.takeAttributesFrom(attrs);
 
-  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS_none,
-                             getDeclSpecContextFromDeclaratorContext(Context));
-
-  return ParseDeclGroup(DS, Context, /*FunctionDefs=*/ false, &DeclEnd, FRI);
+  return DeclGroupPtrTy();
 }
 
 /// Returns true if this might be the start of a declarator, or a common typo

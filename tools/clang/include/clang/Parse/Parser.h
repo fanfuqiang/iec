@@ -1613,6 +1613,7 @@ private:
   ///zet, ParseElementDeclaration
   DeclGroupPtrTy ParseElementDeclaration();
   DeclGroupPtrTy ParseTypeDeclaration(unsigned Context, SourceLocation &DeclEnd);
+  Decl *ParseTypeMemberDeclaration(SourceLocation &SemiLoc);
   DeclGroupPtrTy ParsePOUDeclaration(unsigned Context, SourceLocation &DeclEnd);
   DeclGroupPtrTy ParseSimpleDeclaration(StmtVector &Stmts,
                                         unsigned Context,
