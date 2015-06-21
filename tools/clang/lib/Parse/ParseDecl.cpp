@@ -1233,7 +1233,13 @@ Decl *Parser::ParseTypeMemberDeclaration(SourceLocation &SemiLoc) {
   ParsingDeclSpec DS(*this);
   //
   ParsingDeclarator D(*this, DS, static_cast<Declarator::TheContext>(0));
-  Decl *FirstDecl = ParseDeclarationAfterDeclaratorAndAttributes(D);
+  Decl *TheDecl = ParseDeclarationAfterDeclaratorAndAttributes(D);
+  D.complete(TheDecl);
+  // should do this under some condition?
+  D.clear();
+  ExpectAndConsumeSemi(diag::err_expected_semi_after_type_decl_member);
+
+  return TheDecl;
 }
 
 /// data_type_declaration ::=
@@ -1276,9 +1282,11 @@ Parser::DeclGroupPtrTy Parser::ParseTypeDeclaration(unsigned Context,
 
   }
   DeclEnd = ConsumeToken(); // eat the 'end_type'
-  // Match the return type.
-  //if (isSingleDecl)
-    //return Actions.ConvertDeclToDeclGroup(TheDecl);
+  // TODO
+  ParsingDeclSpec DS(*this);
+  return Actions.FinalizeDeclaratorGroup(getCurScope(), DS,
+                                         DeclsInGroup.data(),
+                                         DeclsInGroup.size());
 
 }
 
