@@ -1611,6 +1611,7 @@ private:
                                   unsigned Context, SourceLocation &DeclEnd,
                                   ParsedAttributesWithRange &attrs);
   ///zet, ParseElementDeclaration
+  void ParseIdentifier(Declarator &D);
   DeclGroupPtrTy ParseElementDeclaration();
   DeclGroupPtrTy ParseTypeDeclaration(unsigned Context, SourceLocation &DeclEnd);
   Decl *ParseTypeMemberDeclaration(SourceLocation &SemiLoc);

@@ -1220,7 +1220,10 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(StmtVector &Stmts,
   return Actions.ConvertDeclToDeclGroup(SingleDecl, OwnedType);
 }
 
-/// { type_declaration ';' }+
+/// type_declaration ::= single_element_type_declaration
+///     | array_type_declaration | struct_type_declaration
+///     | string_type_declaration
+/// simple_type_declaration ::= simple_type_name ':' simple_spec_init
 /// This routine will eat the ending ';'.
 ///
 Decl *Parser::ParseTypeMemberDeclaration(SourceLocation &SemiLoc) {
@@ -1229,14 +1232,22 @@ Decl *Parser::ParseTypeMemberDeclaration(SourceLocation &SemiLoc) {
     Diag(Tok, diag::err_expected_ident_in_type_declaration);
     //return DeclGroupPtrTy();
   }
-  // DeclSpec container
+   // DeclSpec container
   ParsingDeclSpec DS(*this);
   //
   ParsingDeclarator D(*this, DS, static_cast<Declarator::TheContext>(0));
+  // Parse the identifier and eat the identifier
+  ParseIdentifier(D);
+  // eat the ':'
+  ExpectAndConsume(tok::colon, diag::err_expected_colon_after,
+                   "data type declaration identifier", tok::kw_end_type);
+  
+  switch (Tok.getKind()) {
+    
+  }
+
   Decl *TheDecl = ParseDeclarationAfterDeclaratorAndAttributes(D);
   D.complete(TheDecl);
-  // should do this under some condition?
-  D.clear();
   ExpectAndConsumeSemi(diag::err_expected_semi_after_type_decl_member);
 
   return TheDecl;
@@ -1246,13 +1257,10 @@ Decl *Parser::ParseTypeMemberDeclaration(SourceLocation &SemiLoc) {
 ///     'type' type_declaration ';'
 ///       { type_declaration ';'}
 ///     'end_type'
-/// type_declaration ::= single_element_type_declaration
-///     | array_type_declaration | struct_type_declaration
-///     | string_type_declaration
 ///
 Parser::DeclGroupPtrTy Parser::ParseTypeDeclaration(unsigned Context,
                                                 SourceLocation &DeclEnd) {
-  assert(Tok.is(tok::kw_type) && "Not a keyword type!");
+  assert(Tok.is(tok::kw_type) && "Not a TYPE!");
   SourceLocation TypeLoc = ConsumeToken();  // eat the 'type'.
   
   Decl *TheDecl = 0;
@@ -1269,17 +1277,12 @@ Parser::DeclGroupPtrTy Parser::ParseTypeDeclaration(unsigned Context,
   // { type_declaration ';' }+
   while (Tok.isNot(tok::kw_end_type)) {
     TheDecl = ParseTypeMemberDeclaration(SemiLoc);
-    if (Tok.is(tok::kw_end_type)) {
-      // Make sure only be change one time.
-      //if (! isSingleDecl)
-        //isSingleDecl = true;
-      break;
-    }
     // Save single type declaration.
     if (TheDecl)
       DeclsInGroup.push_back(TheDecl);
-
-
+    
+    if (Tok.is(tok::kw_end_type))
+      break;
   }
   DeclEnd = ConsumeToken(); // eat the 'end_type'
   // TODO
@@ -4251,6 +4254,16 @@ void Parser::ParseDeclarator(Declarator &D) {
   /// This implements the 'declarator' production in the C grammar, then checks
   /// for well-formedness and issues diagnostics.
   ParseDeclaratorInternal(D, &Parser::ParseDirectDeclarator);
+}
+
+/// ParseIdentifier - Parse simple type name.
+///
+void Parser::ParseIdentifier(Declarator &D) {
+  assert(Tok.getIdentifierInfo() && "Not an identifier?");
+  D.SetIdentifier(Tok.getIdentifierInfo(), Tok.getLocation());
+  ConsumeToken();
+
+  return;
 }
 
 static bool isPtrOperatorToken(tok::TokenKind Kind, const LangOptions &Lang) {
