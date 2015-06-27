@@ -1220,6 +1220,342 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(StmtVector &Stmts,
   return Actions.ConvertDeclToDeclGroup(SingleDecl, OwnedType);
 }
 
+/// ParseTypeSpecification - Parse the first part of xxx_type_specification
+/// after xxx_type_name and ':' in type definition
+///
+void Parser::ParseTypeSpecification(DeclSpec &DS) {
+  if (DS.getSourceRange().isInvalid()) {
+    DS.SetRangeStart(Tok.getLocation());
+    DS.SetRangeEnd(Tok.getLocation());
+  }
+
+  bool EnteringContext = true;
+   while (1) {
+    bool isInvalid = false;
+    const char *PrevSpec = 0;
+    unsigned DiagID = 0;
+
+    SourceLocation Loc = Tok.getLocation();
+
+    // Always need set typedef in st-lang, when type defined in type definition
+    isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_typedef, Loc,
+                                         PrevSpec, DiagID);
+    switch (Tok.getKind()) {
+    default:
+    DoneWithDeclSpec:
+      // If this is not a declaration specifier token, we're done reading decl
+      // specifiers.  First verify that DeclSpec's are consistent.
+      DS.Finish(Diags, PP);
+      return;
+
+    case tok::annot_typename: {
+      assert(!"annot_typename");
+      if (Tok.getAnnotationValue()) {
+        ParsedType T = getTypeAnnotation(Tok);
+        isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec,
+                                       DiagID, T);
+      } else
+        DS.SetTypeSpecError();
+
+      if (isInvalid)
+        break;
+
+      DS.SetRangeEnd(Tok.getAnnotationEndLoc());
+      ConsumeToken(); // The typename
+
+      continue;
+    }
+
+      // typedef-name
+    case tok::identifier: {
+      // This identifier can only be a typedef name if we haven't already seen
+      // a type-specifier.  Without this check we misparse:
+      //  typedef int X; struct Y { short X; };  as 'short int'.
+      if (DS.hasTypeSpecifier())
+        goto DoneWithDeclSpec;
+
+      ParsedType TypeRep =
+        Actions.getTypeName(*Tok.getIdentifierInfo(),
+                            Tok.getLocation(), getCurScope());
+
+      // If this is not a typedef name, don't parse it as part of the declspec,
+      // it must be an implicit int or an error.
+      if (!TypeRep) {
+        goto DoneWithDeclSpec;
+      }
+
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec,
+                                     DiagID, TypeRep);
+      if (isInvalid)
+        break;
+
+      DS.SetRangeEnd(Tok.getLocation());
+      ConsumeToken(); // The identifier
+
+      // Need to support trailing type qualifiers (e.g. "id<p> const").
+      // If a type specifier follows, it will be diagnosed elsewhere.
+      continue;
+    }
+
+    // type-specifier
+    case tok::kw_bool:
+      if (Tok.is(tok::kw_bool) &&
+          DS.getTypeSpecType() != DeclSpec::TST_unspecified &&
+          DS.getStorageClassSpec() == DeclSpec::SCS_typedef) {
+        PrevSpec = ""; // Not used by the diagnostic.
+        DiagID = diag::err_bool_redeclaration;
+        // For better error recovery.
+        Tok.setKind(tok::identifier);
+        isInvalid = true;
+      } else {
+        isInvalid = DS.SetTypeSpecType(DeclSpec::TST_bool, Loc, PrevSpec,
+                                       DiagID);
+      }
+      break;
+    // st-lang basic types 
+    case tok::kw_sint:
+      // TODO: TST_sint or TST_char? sizeof(sint) is 8 
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_sint, Loc, PrevSpec, DiagID) 
+                  && DS.SetTypeSpecSign(DeclSpec::TSS_signed, Loc, PrevSpec,
+                                        DiagID);
+      break;
+    //case tok::kw_int:
+      // TST_short? sizeof(iec int) is 16 
+      //isInvalid = DS.SetTypeSpecType(DeclSpec::TST_int, Loc, PrevSpec, DiagID) 
+      //            && DS.SetTypeSpecSign(DeclSpec::TSS_signed, Loc, PrevSpec,
+      //                                  DiagID);
+      //break;
+    case tok::kw_dint:
+      // TODO: TST_dint or TST_int? sizeof(sint) is 32 
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_dint, Loc, PrevSpec, DiagID) 
+                  && DS.SetTypeSpecSign(DeclSpec::TSS_signed, Loc, PrevSpec,
+                                        DiagID);
+      break;
+    case tok::kw_lint:
+      // TODO: sizeof(sint) is 64 
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_lint, Loc, PrevSpec, DiagID) 
+                  && DS.SetTypeSpecSign(DeclSpec::TSS_signed, Loc, PrevSpec,
+                                        DiagID);
+      break;
+    case tok::kw_usint:
+      // TODO: TST_usint or TST_char? sizeof(usint) is 8 
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_usint, Loc, PrevSpec, DiagID) 
+                  && DS.SetTypeSpecSign(DeclSpec::TSS_unsigned, Loc, PrevSpec,
+                                        DiagID);
+      break;
+    case tok::kw_uint:
+      // TODO: TST_uint or TST_short? sizeof(uint) is 16 
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_uint, Loc, PrevSpec, DiagID) 
+                  && DS.SetTypeSpecSign(DeclSpec::TSS_unsigned, Loc, PrevSpec,
+                                        DiagID);
+      break;
+    case tok::kw_udint:
+      // TODO: TST_udint or TST_unsigned_int? sizeof(udint) is 32
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_udint, Loc, PrevSpec, DiagID) 
+                  && DS.SetTypeSpecSign(DeclSpec::TSS_unsigned, Loc, PrevSpec,
+                                        DiagID);
+      break;
+    case tok::kw_ulint:
+      // TODO: sizeof(ulint) is 64 
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_ulint, Loc, PrevSpec, DiagID) 
+                  && DS.SetTypeSpecSign(DeclSpec::TSS_unsigned, Loc, PrevSpec,
+                                        DiagID);
+      break;
+    case tok::kw_real:
+      // TODO: TST_real or TST_float?
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_real, Loc, PrevSpec,
+                                     DiagID);
+      break;
+    case tok::kw_lreal:
+      // TODO: TST_lreal or TST_double?
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_lreal, Loc, PrevSpec,
+                                     DiagID);
+      break;
+    case tok::kw_time:
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_time, Loc, PrevSpec,
+                                     DiagID);
+      break;
+    case tok::kw_date:
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_data, Loc, PrevSpec,
+                                     DiagID);
+      break;
+    // zet
+    //case tok::kw_tod:
+    // AddKeyword(StringRef("tod"), kw_time_of_day, ...);
+    case tok::kw_time_of_day:
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_time_of_day, Loc, PrevSpec,
+                                     DiagID);
+      break;
+    //case tok::kw_dt:
+    case tok::kw_date_and_time:
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_data_and_time, Loc, PrevSpec,
+                                     DiagID);
+      break;
+    case tok::kw_string:
+      // TODO: big trouble, string is one of the basic types
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_string, Loc, PrevSpec,
+                                     DiagID);
+      break;
+    case tok::kw_byte:
+      // TODO: char??
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_byte, Loc, PrevSpec,
+                                     DiagID);
+      break;
+    case tok::kw_word:
+      // TODO: short?
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_word, Loc, PrevSpec,
+                                     DiagID);
+      break;
+    case tok::kw_dword:
+      // TODO: int??
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_dword, Loc, PrevSpec,
+                                     DiagID);
+      break;
+    case tok::kw_lword:
+      // TODO: int_64?
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_float, Loc, PrevSpec,
+                                     DiagID);
+      break;
+    case tok::kw_wstring:
+      // TODO: big trouble, string is one of the basic types
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_wstring, Loc, PrevSpec,
+                                     DiagID);
+      break;
+    // end iec basic types
+    case tok::kw__Decimal32:
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_decimal32, Loc, PrevSpec,
+                                     DiagID);
+      break;
+    case tok::kw__Decimal64:
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_decimal64, Loc, PrevSpec,
+                                     DiagID);
+      break;
+    case tok::kw__Decimal128:
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_decimal128, Loc, PrevSpec,
+                                     DiagID);
+      break;
+    case tok::kw___vector:
+      isInvalid = DS.SetTypeAltiVecVector(true, Loc, PrevSpec, DiagID);
+      break;
+    case tok::kw___pixel:
+      isInvalid = DS.SetTypeAltiVecPixel(true, Loc, PrevSpec, DiagID);
+      break;
+    case tok::kw___unknown_anytype:
+      isInvalid = DS.SetTypeSpecType(TST_unknown_anytype, Loc,
+                                     PrevSpec, DiagID);
+      break;
+
+    // class-specifier:
+    case tok::kw_class:
+    case tok::kw_struct:
+    case tok::kw___interface:
+    case tok::kw_union:
+    // st-lang type define
+    case tok::kw_type: {
+      tok::TokenKind Kind = Tok.getKind(); // this value is enumrator: kw_type
+      ConsumeToken();
+      ParseClassSpecifier(Kind, Loc, DS, TemplateInfo, AS,
+                          EnteringContext, DSContext);
+      continue;
+    }
+
+    // enum-specifier:
+    case tok::kw_enum:
+      ConsumeToken();
+      ParseEnumSpecifier(Loc, DS, TemplateInfo, AS, DSContext);
+      continue;
+
+    // cv-qualifier:
+    case tok::kw_const:
+      isInvalid = DS.SetTypeQual(DeclSpec::TQ_const, Loc, PrevSpec, DiagID,
+                                 getLangOpts());
+      break;
+    case tok::kw_volatile:
+      isInvalid = DS.SetTypeQual(DeclSpec::TQ_volatile, Loc, PrevSpec, DiagID,
+                                 getLangOpts());
+      break;
+    case tok::kw_restrict:
+      isInvalid = DS.SetTypeQual(DeclSpec::TQ_restrict, Loc, PrevSpec, DiagID,
+                                 getLangOpts());
+      break;
+
+    // C++ typename-specifier:
+    case tok::kw_typename:
+      if (TryAnnotateTypeOrScopeToken()) {
+        DS.SetTypeSpecError();
+        goto DoneWithDeclSpec;
+      }
+      if (!Tok.is(tok::kw_typename))
+        continue;
+      break;
+
+    // GNU typeof support.
+    case tok::kw_typeof:
+      ParseTypeofSpecifier(DS);
+      continue;
+
+    case tok::annot_decltype:
+      ParseDecltypeSpecifier(DS);
+      continue;
+
+    case tok::kw___underlying_type:
+      ParseUnderlyingTypeSpecifier(DS);
+      continue;
+
+    case tok::kw__Atomic:
+      ParseAtomicSpecifier(DS);
+      continue;
+
+    // OpenCL qualifiers:
+    case tok::kw_private:
+      if (!getLangOpts().OpenCL)
+        goto DoneWithDeclSpec;
+    case tok::kw___private:
+    case tok::kw___global:
+    case tok::kw___local:
+    case tok::kw___constant:
+    case tok::kw___read_only:
+    case tok::kw___write_only:
+    case tok::kw___read_write:
+      ParseOpenCLQualifiers(DS);
+      break;
+
+    case tok::less:
+      // GCC ObjC supports types like "<SomeProtocol>" as a synonym for
+      // "id<SomeProtocol>".  This is hopelessly old fashioned and dangerous,
+      // but we support it.
+      if (DS.hasTypeSpecifier() || !getLangOpts().ObjC1)
+        goto DoneWithDeclSpec;
+
+      if (!ParseObjCProtocolQualifiers(DS))
+        Diag(Loc, diag::warn_objc_protocol_qualifier_missing_id)
+          << FixItHint::CreateInsertion(Loc, "id")
+          << SourceRange(Loc, DS.getSourceRange().getEnd());
+
+      // Need to support trailing type qualifiers (e.g. "id<p> const").
+      // If a type specifier follows, it will be diagnosed elsewhere.
+      continue;
+    }
+    // If the specifier wasn't legal, issue a diagnostic.
+    if (isInvalid) {
+      assert(PrevSpec && "Method did not return previous specifier!");
+      assert(DiagID);
+
+      if (DiagID == diag::ext_duplicate_declspec)
+        Diag(Tok, DiagID)
+          << PrevSpec << FixItHint::CreateRemoval(Tok.getLocation());
+      else
+        Diag(Tok, DiagID) << PrevSpec;
+    }
+
+    DS.SetRangeEnd(Tok.getLocation());
+    if (DiagID != diag::err_bool_redeclaration)
+      ConsumeToken();
+
+    AttrsLastTime = false;
+  }
+}
+
 /// type_declaration ::= single_element_type_declaration
 ///     | array_type_declaration | struct_type_declaration
 ///     | string_type_declaration
@@ -1232,18 +1568,26 @@ Decl *Parser::ParseTypeMemberDeclaration(SourceLocation &SemiLoc) {
     Diag(Tok, diag::err_expected_ident_in_type_declaration);
     //return DeclGroupPtrTy();
   }
-   // DeclSpec container
+  // DeclSpec container
   ParsingDeclSpec DS(*this);
-  //
+  // The parameter DS is a const reference, it has useless value now
   ParsingDeclarator D(*this, DS, static_cast<Declarator::TheContext>(0));
   // Parse the identifier and eat the identifier
   ParseIdentifier(D);
   // eat the ':'
   ExpectAndConsume(tok::colon, diag::err_expected_colon_after,
-                   "data type declaration identifier", tok::kw_end_type);
-  
+                     "data type declaration identifier", tok::kw_end_type);
+  ParseTypeSpecification(DS);
+  //ParseDeclarationSpecifiers();
+  // Distinguish and parse different type 
   switch (Tok.getKind()) {
-    
+    // simple_specification, next will be -> elementary_type_name
+    // sunrange_specification, next will be -> interger_type_name
+    // enumrateed_specification, next will be -> '('
+    // array_specification, next will be -> 'ARRAY'
+    // struct_specification, next will be -> 'STRUCT'
+    // string_specification, next will be -> 'STRING' or 'WSTRING'
+    // identifer, specially it can be every defined type
   }
 
   Decl *TheDecl = ParseDeclarationAfterDeclaratorAndAttributes(D);
@@ -2224,14 +2568,6 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
   bool EnteringContext = (DSContext == DSC_class || DSContext == DSC_top_level);
   bool AttrsLastTime = false;
   ParsedAttributesWithRange attrs(AttrFactory);
-  // data_type_declaration ::=
-  //     'type' type_declaration ';'
-  //     { type_declaration ';'}
-  //     'end_type'
-  if (Tok.getKind() != tok::kw_type) {
-    // TODO: Diag()
-    return;
-  }
   while (1) {
     bool isInvalid = false;
     const char *PrevSpec = 0;
