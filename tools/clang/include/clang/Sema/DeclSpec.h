@@ -265,14 +265,14 @@ public:
   static const TST TST_decimal128 = clang::TST_decimal128;
   // iec basic type
   //static const TST TST_bool = clang::TST_bool;
-  static const TST TST_sint = clang::TST_sint;
+  static const TST TST_sint = clang::TST_char;  // 8, signed
   //static const TST TST_int = clang::TST_int;
-  static const TST TST_dint = clang::TST_dint;
-  static const TST TST_lint = clang::TST_lint;
-  static const TST TST_usint = clang::TST_usint;
-  static const TST TST_uint = clang::TST_uint;
-  static const TST TST_udint = clang::TST_udint;
-  static const TST TST_ulint = clang::TST_ulint;
+  static const TST TST_dint = clang::TST_int;   // 32, signed
+  static const TST TST_lint = clang::TST_lint;  // 64, signed
+  static const TST TST_usint = clang::TST_char; // 8, unsinged
+  static const TST TST_uint = clang::TST_int;   // 16, unsigned
+  static const TST TST_udint = clang::TST_udint;// 32, unsigned
+  static const TST TST_ulint = clang::TST_ulint;// 64, unsigned
   static const TST TST_real = clang::TST_real;
   static const TST TST_lreal = clang::TST_lreal;
   static const TST TST_time = clang::TST_time;
