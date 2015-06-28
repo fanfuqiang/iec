@@ -1224,18 +1224,14 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(StmtVector &Stmts,
 /// after xxx_type_name and ':' in type definition
 ///
 void Parser::ParseTypeSpecification(DeclSpec &DS) {
-  if (DS.getSourceRange().isInvalid()) {
+  if (DS.getSourceRange().isInvalid())
     DS.SetRangeStart(Tok.getLocation());
-    DS.SetRangeEnd(Tok.getLocation());
-  }
-
-  //bool EnteringContext = true;
-   while (1) {
+  // Do not need while(1).
+  while (1) {
     bool isInvalid = false, isError = false;
     const char *PrevSpec = 0;
     Token PrevTok;
     unsigned DiagID = 0;
-
     SourceLocation Loc = Tok.getLocation();
 
     // Always need set typedef in st-lang, when type defined in type definition
@@ -1295,15 +1291,7 @@ void Parser::ParseTypeSpecification(DeclSpec &DS) {
 
       isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec,
                                      DiagID, TypeRep);
-      if (isInvalid)
-        break;
-
-      DS.SetRangeEnd(Tok.getLocation());
-      ConsumeToken(); // The identifier
-
-      // Need to support trailing type qualifiers (e.g. "id<p> const").
-      // If a type specifier follows, it will be diagnosed elsewhere.
-      continue;
+      break;
     }
 
     // type-specifier
@@ -1449,11 +1437,12 @@ void Parser::ParseTypeSpecification(DeclSpec &DS) {
         Diag(Tok, DiagID);
       return;
     }
+    // Everything is correct.
     DS.SetRangeEnd(Tok.getLocation());
     ConsumeToken(); // eat type specification.
-    // Correct part, current token should be ';'.
-    if (! ExpectAndConsumeSemi(diag::err_expected_semi_after_type_specification))
-      return;  
+    // Current token should be ';'.
+    if (!ExpectAndConsumeSemi(diag::err_expected_semi_after_type_specification))
+      return;
   } // while (1)
 }
 
@@ -1477,7 +1466,7 @@ Decl *Parser::ParseTypeMemberDeclaration(SourceLocation &SemiLoc) {
   ParseIdentifier(D);
   // eat the ':'
   ExpectAndConsume(tok::colon, diag::err_expected_colon_after,
-                     "data type declaration identifier", tok::kw_end_type);
+                     "data type name", tok::kw_end_type);
   ParseTypeSpecification(DS);
   //ParseDeclarationSpecifiers();
   // Distinguish and parse different type 
@@ -1502,7 +1491,7 @@ Decl *Parser::ParseTypeMemberDeclaration(SourceLocation &SemiLoc) {
 ///     'end_type'
 ///
 Parser::DeclGroupPtrTy Parser::ParseTypeDeclaration(unsigned Context,
-                                                SourceLocation &DeclEnd) {
+                                                    SourceLocation &DeclEnd) {
   assert(Tok.is(tok::kw_type) && "Not a TYPE!");
   SourceLocation TypeLoc = ConsumeToken();  // eat the 'type'.
   
@@ -1536,9 +1525,29 @@ Parser::DeclGroupPtrTy Parser::ParseTypeDeclaration(unsigned Context,
 
 }
 
+/// ParseFunctionDeclaration - Parse the function declaration
+/// function_declaration ::=
+///   'function' derived_function_name ':'
+///       (elementary_type_name | derived_type_name)
+///     { io_var_declarations | function_var_decls }
+///     function_body
+///   'end_function'
 ///
-Parser::DeclGroupPtrTy Parser::ParsePOUDeclaration(unsigned Context,
-                                                SourceLocation &DeclEnd) {
+/// Handle io_var_declaration and function_var_decls like this:
+///   var  names          -   private data member of class
+///   var_input names     -   const type parameter of member function
+///   var_output names    -   public data member of class
+///   var_in_out names    -   reference type parameter of member function
+///   var_external names  -   globals declaration
+///   var_global names    -   globals definition
+///   var_temp names      -   locals of member function
+///
+Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
+                                                   SourceLocation &DeclEnd) { 
+  assert(Tok.is(tok::kw_function) && "Not a FUNCTION!");
+  SourceLocation FunctionLoc = ConsumeToken();  // eat the 'function'.
+
+
 
 }
 
