@@ -204,6 +204,7 @@ ParsedType Sema::getTypeName(IdentifierInfo &II, SourceLocation NameLoc,
     }
   } else {
     // Perform unqualified name lookup.
+    // zet, find typedef-ed typename will be here.
     LookupName(Result, S);
   }
   

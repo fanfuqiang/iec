@@ -1220,10 +1220,10 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(StmtVector &Stmts,
   return Actions.ConvertDeclToDeclGroup(SingleDecl, OwnedType);
 }
 
-/// ParseTypeSpecification - Parse the first part of xxx_type_specification
+/// ParseHeadTypeSpecification - Parse the first part of xxx_type_specification
 /// after xxx_type_name and ':' in type definition
 ///
-void Parser::ParseTypeSpecification(DeclSpec &DS) {
+void Parser::ParseHeadTypeSpecification(DeclSpec &DS) {
   if (DS.getSourceRange().isInvalid())
     DS.SetRangeStart(Tok.getLocation());
   // Do not need while(1).
@@ -1467,19 +1467,71 @@ Decl *Parser::ParseTypeMemberDeclaration(SourceLocation &SemiLoc) {
   // eat the ':'
   ExpectAndConsume(tok::colon, diag::err_expected_colon_after,
                      "data type name", tok::kw_end_type);
-  ParseTypeSpecification(DS);
+  ParseHeadTypeSpecification(DS);
   //ParseDeclarationSpecifiers();
+  bool isInvalid = false;
+  unsigned DiagID = 0;
   // Distinguish and parse different type 
   switch (Tok.getKind()) {
-    // simple_specification, next will be -> elementary_type_name
     // sunrange_specification, next will be -> interger_type_name
+    // simple_specification, next will be -> elementary_type_name
+    case tok::kw_sint:
+    case tok::kw_int:
+    case tok::kw_dint:
+    case tok::kw_lint:
+    case tok::kw_usint:
+    case tok::kw_uint:
+    case tok::kw_udint:
+    case tok::kw_ulint:
+      // Subrange.
+      if (NextToken().is(tok::l_paren))
+        ParseSubrangeSpecification(DS);
+    break;
+    case tok::identifier: {
+      ParsedType TypeRep =
+        Actions.getTypeName(*Tok.getIdentifierInfo(),
+                            Tok.getLocation(), getCurScope());
+      QualType Result;
+      if (!TypeRep)
+        Result = Actions.GetTypeFromParser(TypeRep);
+      if (!TypeRep || Result.isNull()) {
+        isInvalid = true;
+        // TODO: May be expect a typedef typename is better.
+        DiagID = diag::err_expected_type;
+        break;
+      }
+      // If is integer type.
+      if (Result->isIntegerType() && !Result->isBooleanType())
+        ParseSubrangeSpecification(DS);
+      // Fall through out the switch
+      break;
+    }
     // enumrateed_specification, next will be -> '('
+    case tok::l_paren:
+      assert(!"enum");
+      break;
     // array_specification, next will be -> 'ARRAY'
+    case tok::kw_array:
+      assert(!"array");
+      break;
     // struct_specification, next will be -> 'STRUCT'
+    case tok::kw_struct:
+      assert(!"struct");
+      break;
     // string_specification, next will be -> 'STRING' or 'WSTRING'
+    case tok::kw_string:
+    case tok::kw_wstring:
+      assert(!"string / wstring");
+      break;
     // identifer, specially it can be every defined type
   }
 
+  if (isInvalid) {
+    Diag(Tok, DiagID);
+    return 0;
+  }
+  // Simple specification
+  ParseSimpleSpecification(DS);
   Decl *TheDecl = ParseDeclarationAfterDeclaratorAndAttributes(D);
   D.complete(TheDecl);
   return TheDecl;

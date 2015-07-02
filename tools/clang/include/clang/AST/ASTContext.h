@@ -694,6 +694,7 @@ public:
 
 
   // Builtin Types.
+  // TODO, add various time type for st-lang. 
   CanQualType VoidTy;
   CanQualType BoolTy;
   CanQualType CharTy;
