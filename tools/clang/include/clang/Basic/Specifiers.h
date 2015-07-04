@@ -34,35 +34,27 @@ namespace clang {
   
   /// \brief Specifies the kind of type.
   enum TypeSpecifierType {
+    // The width of DeclSpec::TypeSpecType is 5, so the value of enumrator 
+    // can not beyond 32.
     TST_unspecified,
     TST_void,
     TST_char,
-    TST_wchar,        // C++ wchar_t
-    TST_char16,       // C++0x char16_t
-    TST_char32,       // C++0x char32_t
     TST_int,
-    TST_int128,
-    TST_half,         // OpenCL half, ARM NEON __fp16
     TST_float,
     TST_double,
     TST_bool,         // _Bool
-    TST_decimal32,    // _Decimal32
-    TST_decimal64,    // _Decimal64
-    TST_decimal128,   // _Decimal128
     TST_enum,
     TST_union,
     TST_struct,
-    //TST_type,       // iec define type
-    TST_sint,         // iec short interger size is 8
-    //TST_int,        // iec interger size is 16
-    TST_dint,         // iec double interger size is 32
-    TST_lint,         // iec long interger size is 64
-    TST_usint,        // iec unsigned short interger size is 8
-    TST_uint,         // iec unsigned interger size is 16
-    TST_udint,        // iec unsigned double interger size is 32
-    TST_ulint,        // iec unsigned long interger size is 64
-    TST_real,         // iec real number size is 32
-    TST_lreal,        // iec long real size is 64
+    //TST_sint,         // iec short interger size is 8
+    //TST_dint,         // iec double interger size is 32
+    //TST_lint,         // iec long interger size is 64
+    //TST_usint,        // iec unsigned short interger size is 8
+    //TST_uint,         // iec unsigned interger size is 16
+    //TST_udint,        // iec unsigned double interger size is 32
+    //TST_ulint,        // iec unsigned long interger size is 64
+    //TST_real,         // iec real number size is 32
+    //TST_lreal,        // iec long real size is 64
     TST_time,         // iec duration
     TST_data,         // iec data
     TST_time_of_day,  // iec time of day
@@ -75,18 +67,28 @@ namespace clang {
     TST_dword,        // iec bit string of length 32
     TST_lword,        // iec bit string of length 64
     TST_wstring,      // iec variable-length double-byte character string
-
+    TST_function,     // function
+    TST_function_block, // function_blcok
+    TST_program,      // program
     TST_class,        // C++ class type
-    TST_interface,    // C++ (Microsoft-specific) __interface type
     TST_typename,     // Typedef, C++ class-name or enum name, etc.
-    TST_typeofType,
-    TST_typeofExpr,
-    TST_decltype,     // C++0x decltype
-    TST_underlyingType, // __underlying_type for C++0x
     TST_auto,         // C++0x auto
-    TST_unknown_anytype, // __unknown_anytype extension
     TST_atomic,       // C11 _Atomic
-    TST_error         // erroneous type
+    TST_error,         // erroneous type
+    TST_wchar = TST_error,            // C++ wchar_t
+    TST_char16 = TST_error,           // C++0x char16_t
+    TST_char32 = TST_error,           // C++0x char32_t
+    TST_int128 = TST_error,
+    TST_half = TST_error,             // OpenCL half, ARM NEON __fp16
+    TST_decimal32 = TST_error,        // _Decimal32
+    TST_decimal64 = TST_error,        // _Decimal64
+    TST_decimal128 = TST_error,       // _Decimal128
+    TST_interface = TST_error,        // C++ (Microsoft-specific) __interface type
+    TST_typeofType = TST_error,
+    TST_typeofExpr = TST_error,
+    TST_decltype = TST_error,         // C++0x decltype
+    TST_underlyingType = TST_error,   // __underlying_type for C++0x
+    TST_unknown_anytype = TST_error,  // __unknown_anytype extension
   };
   
   /// \brief Structure that packs information about the type specifiers that

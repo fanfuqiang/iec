@@ -389,32 +389,36 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T) {
   case DeclSpec::TST_unspecified: return "unspecified";
   case DeclSpec::TST_void:        return "void";
   case DeclSpec::TST_char:        return "char";
-  case DeclSpec::TST_wchar:       return "wchar_t";
-  case DeclSpec::TST_char16:      return "char16_t";
-  case DeclSpec::TST_char32:      return "char32_t";
+  //case DeclSpec::TST_wchar:       return "wchar_t";
+  //case DeclSpec::TST_char16:      return "char16_t";
+  //case DeclSpec::TST_char32:      return "char32_t";
   case DeclSpec::TST_int:         return "int";
-  case DeclSpec::TST_int128:      return "__int128";
-  case DeclSpec::TST_half:        return "half";
+  //case DeclSpec::TST_int128:      return "__int128";
+  //case DeclSpec::TST_half:        return "half";
   case DeclSpec::TST_float:       return "float";
   case DeclSpec::TST_double:      return "double";
   case DeclSpec::TST_bool:        return "_Bool";
-  case DeclSpec::TST_decimal32:   return "_Decimal32";
-  case DeclSpec::TST_decimal64:   return "_Decimal64";
-  case DeclSpec::TST_decimal128:  return "_Decimal128";
+  //case DeclSpec::TST_decimal32:   return "_Decimal32";
+  //case DeclSpec::TST_decimal64:   return "_Decimal64";
+  //case DeclSpec::TST_decimal128:  return "_Decimal128";
   case DeclSpec::TST_enum:        return "enum";
   case DeclSpec::TST_class:       return "class";
   case DeclSpec::TST_union:       return "union";
   case DeclSpec::TST_struct:      return "struct";
-  case DeclSpec::TST_interface:   return "__interface";
+  case DeclSpec::TST_function:      return "function";
+  case DeclSpec::TST_function_block:      return "function_block"; 
+  case DeclSpec::TST_program:      return "program"; 
+  //case DeclSpec::TST_interface:   return "__interface";
   case DeclSpec::TST_typename:    return "type-name";
-  case DeclSpec::TST_typeofType:
-  case DeclSpec::TST_typeofExpr:  return "typeof";
+  //case DeclSpec::TST_typeofType:
+  //case DeclSpec::TST_typeofExpr:  return "typeof";
   case DeclSpec::TST_auto:        return "auto";
-  case DeclSpec::TST_decltype:    return "(decltype)";
-  case DeclSpec::TST_underlyingType: return "__underlying_type";
-  case DeclSpec::TST_unknown_anytype: return "__unknown_anytype";
+  //case DeclSpec::TST_decltype:    return "(decltype)";
+  //case DeclSpec::TST_underlyingType: return "__underlying_type";
+  //case DeclSpec::TST_unknown_anytype: return "__unknown_anytype";
   case DeclSpec::TST_atomic: return "_Atomic";
   case DeclSpec::TST_error:       return "(error)";
+
   }
   llvm_unreachable("Unknown typespec!");
 }

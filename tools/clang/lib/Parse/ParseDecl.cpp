@@ -1598,9 +1598,64 @@ Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
                                                    SourceLocation &DeclEnd) { 
   assert(Tok.is(tok::kw_function) && "Not a FUNCTION!");
   SourceLocation FunctionLoc = ConsumeToken();  // eat the 'function'.
+  if (Tok.getKind() != tok::identifier) {
+    Diag(Tok, diag::err_expected_ident_after) << "FUNCTION";
+    return DeclGroupPtrTy();
+  }
+  DeclSpec::TST TagType = DeclSpec::TST_struct;
+  // Parse the return type.
+  ParsingDeclSpec DS(*this);
+  // Parse the function name.
+  IdentifierInfo *Name = Tok.getIdentifierInfo();
+  SourceLocation NameLoc = ConsumeToken();
+  // Parse the (optional) nested-name-specifier.
+  CXXScopeSpec &SS = DS.getTypeSpecScope();
+  bool Owned = false;
+  bool IsDependent = false;
+  // Create the tag portion of the class.
+  DeclResult TagOrTempResult = true; // invalid
+  // Declaration or definition of a class type
+  TagOrTempResult = Actions.ActOnTag(getCurScope(), DeclSpec::TST_class,
+                                       Sema::TUK_Definition, FunctionLoc,
+                                       SS, Name, NameLoc, 0, AS_none,
+                                       SourceLocation(), MultiTemplateParamsArg(),
+                                       Owned, IsDependent,
+                                       SourceLocation(), false,
+                                       clang::TypeResult());
+  assert(IsDependent == false);
+  // Parse funciton body
+  ParseCXXMemberSpecification(FunctionLoc, DeclSpec::TST_class,
+                              TagOrTempResult.get());
+  // 
+  bool Result;
+  unsigned DiagID;
+  const char *PrevSpec = 0;
+  //
+  if (!TagOrTempResult.isInvalid()) {
+    Result = DS.SetTypeSpecType(DeclSpec::TST_class, FunctionLoc,
+                                NameLoc.isValid() ? NameLoc : FunctionLoc,
+                                PrevSpec, DiagID, TagOrTempResult.get(), Owned);
+  } else {
+    DS.SetTypeSpecError();
+    return;
+  }
+  // 
+  if (Result)
+    Diag(FunctionLoc, DiagID) << PrevSpec;
+  // At this point, we've successfully parsed a function in 'function declaration'
+  // While we could just return here, we're going to look at what comes after it
+  // to improve error recovery.  If an impossible token occurs next, we assume 
+  // that the programmer forgot a 'end_function'at the end of the declaration and
+  // recover that way.
+  ExpectAndConsume(tok::kw_end_function, 
+                   diag::err_expected_end_function_in_function_declaration);
+  // Push this token back into the preprocessor and change our current token
+  // to ';' so that the rest of the code recovers as though there were an
+  // ';' after the definition.
+  PP.EnterToken(Tok);
+  Tok.setKind(tok::kw_end_function);
 
-
-
+  return;
 }
 
 ///       simple-declaration: [C99 6.7: declaration] [C++ 7p1: dcl.dcl]
