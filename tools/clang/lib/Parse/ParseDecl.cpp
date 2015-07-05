@@ -1614,7 +1614,7 @@ Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
   bool IsDependent = false;
   // Create the tag portion of the class.
   DeclResult TagOrTempResult = true; // invalid
-  // Declaration or definition of a class type
+  // Declaration or definition of a class type.
   TagOrTempResult = Actions.ActOnTag(getCurScope(), DeclSpec::TST_class,
                                        Sema::TUK_Definition, FunctionLoc,
                                        SS, Name, NameLoc, 0, AS_none,
@@ -1623,7 +1623,10 @@ Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
                                        SourceLocation(), false,
                                        clang::TypeResult());
   assert(IsDependent == false);
-  // Parse funciton body
+
+  ExpectAndConsume(tok::colon, diag::err_expected_colon_after,
+                   Name->getName().data()); // eat the ':'.
+  // Parse funciton body.
   ParseCXXMemberSpecification(FunctionLoc, DeclSpec::TST_class,
                               TagOrTempResult.get());
   // 
