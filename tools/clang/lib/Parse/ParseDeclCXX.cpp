@@ -2280,6 +2280,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
                                       "parsing struct/union/class body");
 
   // Enter a scope for the class.
+  // Note that function body should not enter a new scope again for st-lang.
   ParseScope ClassScope(this, Scope::ClassScope|Scope::DeclScope);
 
   // Note that we are parsing a new (potentially-nested) class definition.

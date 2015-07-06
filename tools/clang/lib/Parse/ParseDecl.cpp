@@ -1487,57 +1487,57 @@ Decl *Parser::ParseTypeMemberDeclaration(SourceLocation &SemiLoc) {
   unsigned DiagID = 0;
   // Distinguish and parse different type 
   switch (Tok.getKind()) {
-    // sunrange_specification, next will be -> interger_type_name
-    // simple_specification, next will be -> elementary_type_name
-    case tok::kw_sint:
-    case tok::kw_int:
-    case tok::kw_dint:
-    case tok::kw_lint:
-    case tok::kw_usint:
-    case tok::kw_uint:
-    case tok::kw_udint:
-    case tok::kw_ulint:
-      // Subrange.
-      if (NextToken().is(tok::l_paren))
-        ParseSubrangeSpecification(DS);
-    break;
-    case tok::identifier: {
-      ParsedType TypeRep =
-        Actions.getTypeName(*Tok.getIdentifierInfo(),
-                            Tok.getLocation(), getCurScope());
-      QualType Result;
-      if (!TypeRep)
-        Result = Actions.GetTypeFromParser(TypeRep);
-      if (!TypeRep || Result.isNull()) {
-        isInvalid = true;
-        // TODO: May be expect a typedef typename is better.
-        DiagID = diag::err_expected_type;
-        break;
-      }
-      // If is integer type.
-      if (Result->isIntegerType() && !Result->isBooleanType())
-        ParseSubrangeSpecification(DS);
-      // Fall through out the switch
+  // sunrange_specification, next will be -> interger_type_name
+  // simple_specification, next will be -> elementary_type_name
+  case tok::kw_sint:
+  case tok::kw_int:
+  case tok::kw_dint:
+  case tok::kw_lint:
+  case tok::kw_usint:
+  case tok::kw_uint:
+  case tok::kw_udint:
+  case tok::kw_ulint:
+    // Subrange.
+    if (NextToken().is(tok::l_paren))
+      ParseSubrangeSpecification(DS);
+  break;
+  case tok::identifier: {
+    ParsedType TypeRep =
+      Actions.getTypeName(*Tok.getIdentifierInfo(),
+                          Tok.getLocation(), getCurScope());
+    QualType Result;
+    if (!TypeRep)
+      Result = Actions.GetTypeFromParser(TypeRep);
+    if (!TypeRep || Result.isNull()) {
+      isInvalid = true;
+      // TODO: May be expect a typedef typename is better.
+      DiagID = diag::err_expected_type;
       break;
     }
-    // enumrateed_specification, next will be -> '('
-    case tok::l_paren:
-      assert(!"enum");
-      break;
-    // array_specification, next will be -> 'ARRAY'
-    case tok::kw_array:
-      assert(!"array");
-      break;
-    // struct_specification, next will be -> 'STRUCT'
-    case tok::kw_struct:
-      assert(!"struct");
-      break;
-    // string_specification, next will be -> 'STRING' or 'WSTRING'
-    case tok::kw_string:
-    case tok::kw_wstring:
-      assert(!"string / wstring");
-      break;
-    // identifer, specially it can be every defined type
+    // If is integer type.
+    if (Result->isIntegerType() && !Result->isBooleanType())
+      ParseSubrangeSpecification(DS);
+    // Fall through out the switch
+    break;
+  }
+  // enumrateed_specification, next will be -> '('
+  case tok::l_paren:
+    assert(!"enum");
+    break;
+  // array_specification, next will be -> 'ARRAY'
+  case tok::kw_array:
+    assert(!"array");
+    break;
+  // struct_specification, next will be -> 'STRUCT'
+  case tok::kw_struct:
+    assert(!"struct");
+    break;
+  // string_specification, next will be -> 'STRING' or 'WSTRING'
+  case tok::kw_string:
+  case tok::kw_wstring:
+    assert(!"string / wstring");
+    break;
+  // identifer, specially it can be every defined type
   }
 
   if (isInvalid) {
@@ -1591,15 +1591,9 @@ Parser::DeclGroupPtrTy Parser::ParseTypeDeclaration(unsigned Context,
 
 }
 
-/// ParseFunctionDeclaration - Parse the function declaration
-/// function_declaration ::=
-///   'function' derived_function_name ':'
-///       (elementary_type_name | derived_type_name)
-///     { io_var_declarations | function_var_decls }
-///     function_body
-///   'end_function'
+/// ParseVariableDeclarations - Parse the variable declarations.
 ///
-/// Handle io_var_declaration and function_var_decls like this:
+/// Handle the variable declarations like this:
 ///   var  names          -   private data member of class
 ///   var_input names     -   const type parameter of member function
 ///   var_output names    -   public data member of class
@@ -1608,8 +1602,34 @@ Parser::DeclGroupPtrTy Parser::ParseTypeDeclaration(unsigned Context,
 ///   var_global names    -   globals definition
 ///   var_temp names      -   locals of member function
 ///
+void Parser::ParseVariableDeclarations(Decl *TagDecl) {
+  SourceLocation VarLoc;
+  switch (Tok.getKind()) {
+  case tok::kw_var:
+
+  case tok::kw_var_input:
+  case tok::kw_var_in_out:
+  case tok::kw_var_output:
+  case tok::kw_var_external:
+  case tok::kw_var_global:
+  case tok::kw_var_temp:
+  default:
+    Diag(Tok, diag::err_expected_var_declaration_keyword);
+  }
+
+  return;
+}
+
+/// ParseFunctionDeclaration - Parse the function declaration.
+/// function_declaration ::=
+///   'function' derived_function_name ':'
+///       (elementary_type_name | derived_type_name)
+///     { io_var_declarations | function_var_decls }
+///     function_body
+///   'end_function'
+///
 Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
-                                                   SourceLocation &DeclEnd) { 
+                                                   SourceLocation &DeclEnd) {
   assert(Tok.is(tok::kw_function) && "Not a FUNCTION!");
   SourceLocation FunctionLoc = ConsumeToken();  // eat the 'function'
   if (Tok.getKind() != tok::identifier) {
@@ -1642,7 +1662,9 @@ Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
                    Name->getName().data()); // eat the ':'
   // Parse the function return type.
   ParseHeadTypeSpecification(DS);
-  // Parse the var declaration and funciton body.
+  // Parse the var declarations
+  ParseVariableDeclarations(TagOrTempResult.get());
+  // Parse the funciton body.
   ParseCXXMemberSpecification(FunctionLoc, DeclSpec::TST_class,
                               TagOrTempResult.get());
 

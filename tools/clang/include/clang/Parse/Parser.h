@@ -1615,6 +1615,7 @@ private:
   void ParseHeadTypeSpecification(DeclSpec &DS);
   void ParseSubrangeSpecification(DeclSpec &DS);
   void ParseSimpleSpecification(DeclSpec &DS);
+  void ParseVariableDeclarations(Decl *TagDecl);
   DeclGroupPtrTy ParseElementDeclaration();
   DeclGroupPtrTy ParseTypeDeclaration(unsigned Context, SourceLocation &DeclEnd);
   Decl *ParseTypeMemberDeclaration(SourceLocation &SemiLoc);
