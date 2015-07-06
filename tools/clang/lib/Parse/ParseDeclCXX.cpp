@@ -2272,185 +2272,41 @@ ExprResult Parser::ParseCXXMemberInitializer(Decl *D, bool IsFunction,
 void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
                                          unsigned TagType, Decl *TagDecl) {
   assert((TagType == DeclSpec::TST_struct ||
-         TagType == DeclSpec::TST_interface ||
+         TagType == DeclSpec::TST_function ||
          TagType == DeclSpec::TST_union  ||
          TagType == DeclSpec::TST_class) && "Invalid TagType!");
 
   PrettyDeclStackTraceEntry CrashInfo(Actions, TagDecl, RecordLoc,
                                       "parsing struct/union/class body");
 
-  // Determine whether this is a non-nested class. Note that local
-  // classes are *not* considered to be nested classes.
-  bool NonNestedClass = true;
-  if (!ClassStack.empty()) {
-    for (const Scope *S = getCurScope(); S; S = S->getParent()) {
-      if (S->isClassScope()) {
-        // We're inside a class scope, so this is a nested class.
-        NonNestedClass = false;
-
-        // The Microsoft extension __interface does not permit nested classes.
-        if (getCurrentClass().IsInterface) {
-          Diag(RecordLoc, diag::err_invalid_member_in_interface)
-            << /*ErrorType=*/6
-            << (isa<NamedDecl>(TagDecl)
-                  ? cast<NamedDecl>(TagDecl)->getQualifiedNameAsString()
-                  : "<anonymous>");
-        }
-        break;
-      }
-
-      if ((S->getFlags() & Scope::FnScope)) {
-        // If we're in a function or function template declared in the
-        // body of a class, then this is a local class rather than a
-        // nested class.
-        const Scope *Parent = S->getParent();
-        if (Parent->isTemplateParamScope())
-          Parent = Parent->getParent();
-        if (Parent->isClassScope())
-          break;
-      }
-    }
-  }
-
   // Enter a scope for the class.
   ParseScope ClassScope(this, Scope::ClassScope|Scope::DeclScope);
 
   // Note that we are parsing a new (potentially-nested) class definition.
-  ParsingClassDefinition ParsingDef(*this, TagDecl, NonNestedClass,
+  ParsingClassDefinition ParsingDef(*this, TagDecl, true,
                                     TagType == DeclSpec::TST_interface);
 
   if (TagDecl)
     Actions.ActOnTagStartDefinition(getCurScope(), TagDecl);
-
+  
   SourceLocation FinalLoc;
 
-  // Parse the optional 'final' keyword.
-  if (getLangOpts().CPlusPlus && Tok.is(tok::identifier)) {
-    assert(isCXX0XFinalKeyword() && "not a class definition");
-    FinalLoc = ConsumeToken();
-
-    if (TagType == DeclSpec::TST_interface) {
-      Diag(FinalLoc, diag::err_override_control_interface)
-        << "final";
-    } else {
-      Diag(FinalLoc, getLangOpts().CPlusPlus0x ?
-           diag::warn_cxx98_compat_override_control_keyword :
-           diag::ext_override_control_keyword) << "final";
-    }
-  }
-
-  if (Tok.is(tok::colon)) {
-    ParseBaseClause(TagDecl);
-
-    if (!Tok.is(tok::l_brace)) {
-      Diag(Tok, diag::err_expected_lbrace_after_base_specifiers);
-
-      if (TagDecl)
-        Actions.ActOnTagDefinitionError(getCurScope(), TagDecl);
-      return;
-    }
-  }
-
-  assert(Tok.is(tok::l_brace));
-  BalancedDelimiterTracker T(*this, tok::l_brace);
-  T.consumeOpen();
-
   if (TagDecl)
-    Actions.ActOnStartCXXMemberDeclarations(getCurScope(), TagDecl, FinalLoc,
-                                            T.getOpenLocation());
+    Actions.ActOnStartCXXMemberDeclarations(getCurScope(), TagDecl,
+                                            SourceLocation(), SourceLocation());
 
   // C++ 11p3: Members of a class defined with the keyword class are private
   // by default. Members of a class defined with the keywords struct or union
   // are public by default.
-  AccessSpecifier CurAS;
-  if (TagType == DeclSpec::TST_class)
-    CurAS = AS_private;
-  else
-    CurAS = AS_public;
-  ParsedAttributes AccessAttrs(AttrFactory);
+  AccessSpecifier CurAS = AS_public;
 
   if (TagDecl) {
     // While we still have something to read, read the member-declarations.
-    while (Tok.isNot(tok::r_brace) && Tok.isNot(tok::eof)) {
-      // Each iteration of this loop reads one member-declaration.
-
-      if (getLangOpts().MicrosoftExt && (Tok.is(tok::kw___if_exists) ||
-          Tok.is(tok::kw___if_not_exists))) {
-        ParseMicrosoftIfExistsClassDeclaration((DeclSpec::TST)TagType, CurAS);
-        continue;
-      }
-
-      // Check for extraneous top-level semicolon.
-      if (Tok.is(tok::semi)) {
-        ConsumeExtraSemi(InsideStruct, TagType);
-        continue;
-      }
-
-      if (Tok.is(tok::annot_pragma_vis)) {
-        HandlePragmaVisibility();
-        continue;
-      }
-
-      if (Tok.is(tok::annot_pragma_pack)) {
-        HandlePragmaPack();
-        continue;
-      }
-
-      if (Tok.is(tok::annot_pragma_align)) {
-        HandlePragmaAlign();
-        continue;
-      }
-
-      AccessSpecifier AS = getAccessSpecifierIfPresent();
-      if (AS != AS_none) {
-        // Current token is a C++ access specifier.
-        CurAS = AS;
-        SourceLocation ASLoc = Tok.getLocation();
-        unsigned TokLength = Tok.getLength();
-        ConsumeToken();
-        AccessAttrs.clear();
-        MaybeParseGNUAttributes(AccessAttrs);
-
-        SourceLocation EndLoc;
-        if (Tok.is(tok::colon)) {
-          EndLoc = Tok.getLocation();
-          ConsumeToken();
-        } else if (Tok.is(tok::semi)) {
-          EndLoc = Tok.getLocation();
-          ConsumeToken();
-          Diag(EndLoc, diag::err_expected_colon) 
-            << FixItHint::CreateReplacement(EndLoc, ":");
-        } else {
-          EndLoc = ASLoc.getLocWithOffset(TokLength);
-          Diag(EndLoc, diag::err_expected_colon) 
-            << FixItHint::CreateInsertion(EndLoc, ":");
-        }
-
-        // The Microsoft extension __interface does not permit non-public
-        // access specifiers.
-        if (TagType == DeclSpec::TST_interface && CurAS != AS_public) {
-          Diag(ASLoc, diag::err_access_specifier_interface)
-            << (CurAS == AS_protected);
-        }
-
-        if (Actions.ActOnAccessSpecifier(AS, ASLoc, EndLoc,
-                                         AccessAttrs.getList())) {
-          // found another attribute than only annotations
-          AccessAttrs.clear();
-        }
-
-        continue;
-      }
-
-      // FIXME: Make sure we don't have a template here.
-
+    if (Tok.isNot(tok::kw_end_function) && Tok.isNot(tok::eof))
       // Parse all the comma separated declarators.
-      ParseCXXClassMemberDeclaration(CurAS, AccessAttrs.getList());
-    }
-
-    T.consumeClose();
+      ParseCXXClassMemberDeclaration(CurAS, 0);
   } else {
-    SkipUntil(tok::r_brace, false, false);
+    SkipUntil(tok::kw_end_function, false, false);
   }
 
   // If attributes exist after class contents, parse them.
@@ -2468,7 +2324,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   //   within function bodies, default arguments, and
   //   brace-or-equal-initializers for non-static data members (including such
   //   things in nested classes).
-  if (TagDecl && NonNestedClass) {
+  if (TagDecl) {
     // We are not inside a nested class. This class and its nested classes
     // are complete and we can parse the delayed portions of method
     // declarations and the lexed inline method definitions, along with any

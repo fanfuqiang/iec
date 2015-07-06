@@ -1221,7 +1221,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(StmtVector &Stmts,
 }
 
 /// ParseHeadTypeSpecification - Parse the first part of xxx_type_specification
-/// after xxx_type_name and ':' in type definition
+/// after xxx_type_name and ':' in type definition, KEEP the ';' in the last.
 ///
 void Parser::ParseHeadTypeSpecification(DeclSpec &DS) {
   if (DS.getSourceRange().isInvalid())
@@ -1408,14 +1408,14 @@ void Parser::ParseHeadTypeSpecification(DeclSpec &DS) {
     // class-specifier:
     case tok::kw_struct: {
       ConsumeToken();
-      ParseClassSpecifier(tok::kw_class, Loc, DS, ParsedTemplateInfo(), AS,
-                          false, DSContext);
+      /*ParseClassSpecifier(tok::kw_class, Loc, DS, ParsedTemplateInfo(), AS,
+                          false, DSContext);*/
       continue;
     }
     // enum-specifier:
     case tok::l_paren:
       ConsumeToken();
-      ParseEnumSpecifier(Loc, DS, ParsedTemplateInfo(), AS, DSContext);
+      //ParseEnumSpecifier(Loc, DS, ParsedTemplateInfo(), AS, DSContext);
       continue;
     } // switch
     // If the specifier wasn't legal, issue a diagnostic.
@@ -1440,10 +1440,24 @@ void Parser::ParseHeadTypeSpecification(DeclSpec &DS) {
     // Everything is correct.
     DS.SetRangeEnd(Tok.getLocation());
     ConsumeToken(); // eat type specification.
-    // Current token should be ';'.
-    if (!ExpectAndConsumeSemi(diag::err_expected_semi_after_type_specification))
-      return;
+    
+    return;
   } // while (1)
+}
+
+/// ParseSimpleSpecification - Parse simple type specification, but most of work
+/// have been done by ParseHeadTypeSpecification, only need handle initializer.
+///
+/// simple_spec_init := simple_specification [':=' constant]
+/// simple_specification := elementary_type_name | simple_type_name
+///
+void Parser::ParseSimpleSpecification(DeclSpec &DS) {
+  if (Tok.isNot(tok::semi) && Tok.is(tok::colonequal))
+    assert(!"simple type specification has initializer");
+  //Current token should be ';'.
+  ExpectAndConsumeSemi(diag::err_expected_semi_after_type_specification);
+  
+  return;
 }
 
 /// type_declaration ::= single_element_type_declaration
@@ -1597,12 +1611,12 @@ Parser::DeclGroupPtrTy Parser::ParseTypeDeclaration(unsigned Context,
 Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
                                                    SourceLocation &DeclEnd) { 
   assert(Tok.is(tok::kw_function) && "Not a FUNCTION!");
-  SourceLocation FunctionLoc = ConsumeToken();  // eat the 'function'.
+  SourceLocation FunctionLoc = ConsumeToken();  // eat the 'function'
   if (Tok.getKind() != tok::identifier) {
     Diag(Tok, diag::err_expected_ident_after) << "FUNCTION";
     return DeclGroupPtrTy();
   }
-  DeclSpec::TST TagType = DeclSpec::TST_struct;
+  DeclSpec::TST TagType = DeclSpec::TST_function;
   // Parse the return type.
   ParsingDeclSpec DS(*this);
   // Parse the function name.
@@ -1616,24 +1630,26 @@ Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
   DeclResult TagOrTempResult = true; // invalid
   // Declaration or definition of a class type.
   TagOrTempResult = Actions.ActOnTag(getCurScope(), DeclSpec::TST_class,
-                                       Sema::TUK_Definition, FunctionLoc,
-                                       SS, Name, NameLoc, 0, AS_none,
-                                       SourceLocation(), MultiTemplateParamsArg(),
-                                       Owned, IsDependent,
-                                       SourceLocation(), false,
-                                       clang::TypeResult());
+                                     Sema::TUK_Definition, FunctionLoc,
+                                     SS, Name, NameLoc, 0, AS_none,
+                                     SourceLocation(), MultiTemplateParamsArg(),
+                                     Owned, IsDependent,
+                                     SourceLocation(), false,
+                                     clang::TypeResult());
   assert(IsDependent == false);
 
   ExpectAndConsume(tok::colon, diag::err_expected_colon_after,
-                   Name->getName().data()); // eat the ':'.
-  // Parse funciton body.
+                   Name->getName().data()); // eat the ':'
+  // Parse the function return type.
+  ParseHeadTypeSpecification(DS);
+  // Parse the var declaration and funciton body.
   ParseCXXMemberSpecification(FunctionLoc, DeclSpec::TST_class,
                               TagOrTempResult.get());
-  // 
+
   bool Result;
   unsigned DiagID;
   const char *PrevSpec = 0;
-  //
+
   if (!TagOrTempResult.isInvalid()) {
     Result = DS.SetTypeSpecType(DeclSpec::TST_class, FunctionLoc,
                                 NameLoc.isValid() ? NameLoc : FunctionLoc,
@@ -1642,7 +1658,7 @@ Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
     DS.SetTypeSpecError();
     return;
   }
-  // 
+
   if (Result)
     Diag(FunctionLoc, DiagID) << PrevSpec;
   // At this point, we've successfully parsed a function in 'function declaration'
