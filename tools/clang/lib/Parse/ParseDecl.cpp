@@ -1602,12 +1602,40 @@ Parser::DeclGroupPtrTy Parser::ParseTypeDeclaration(unsigned Context,
 ///   var_global names    -   globals definition
 ///   var_temp names      -   locals of member function
 ///
+/// input_declarations :=
+///   'VAR_INPUT' ['retain' | 'no_retain']
+///   input_declaration ';'
+///   {input_declaration ';'}
+///   'END_VAR'
+///
 void Parser::ParseVariableDeclarations(Decl *TagDecl) {
-  SourceLocation VarLoc;
+  SourceLocation InputLoc;
+  // Parse the common declaration-specifiers piece.
+  ParsingDeclSpec DS(*this);
+  // Parse the var name.
+  ParsingDeclarator DeclaratorInfo(*this, DS, Declarator::MemberContext);
+  const char *VarKindName;
+  
   switch (Tok.getKind()) {
   case tok::kw_var:
 
-  case tok::kw_var_input:
+  case tok::kw_var_input: {
+    VarKindName = "VAR_INPUT";
+    InputLoc = ConsumeToken();
+    // TODO: Parse ['retain' | 'no_retain'].
+    ParseIdentifier(DeclaratorInfo);
+    // Error parsing the declarator?
+    if (!DeclaratorInfo.hasName()) {
+      Diag(Tok, diag::err_expected_ident_after) << VarKindName;
+      // If so, skip until the ':' or a ';'.
+      SkipUntil(tok::colon, true, true);
+      if (Tok.is(tok::semi))
+        ConsumeToken();
+      return;
+    }
+
+
+  }
   case tok::kw_var_in_out:
   case tok::kw_var_output:
   case tok::kw_var_external:
