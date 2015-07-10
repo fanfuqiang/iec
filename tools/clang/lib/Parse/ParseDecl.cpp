@@ -1614,19 +1614,20 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
   ParsingDeclSpec DS(*this);
   // Parse the var name.
   ParsingDeclarator DeclaratorInfo(*this, DS, Declarator::MemberContext);
-  const char *VarKindName;
-  
-  switch (Tok.getKind()) {
+  //const char *VarKindName;
+  tok::TokenKind VarKind = Tok.getKind();
+
+  switch (VarKind) {
   case tok::kw_var:
 
   case tok::kw_var_input: {
-    VarKindName = "VAR_INPUT";
+    //VarKindName = "VAR_INPUT";
     InputLoc = ConsumeToken();
     // TODO: Parse ['retain' | 'no_retain'].
     ParseIdentifier(DeclaratorInfo);
     // Error parsing the declarator?
     if (!DeclaratorInfo.hasName()) {
-      Diag(Tok, diag::err_expected_ident_after) << VarKindName;
+      Diag(Tok, diag::err_expected_ident_after) << tok::getTokenName(VarKind);
       // If so, skip until the ':' or a ';'.
       SkipUntil(tok::colon, true, true);
       if (Tok.is(tok::semi))

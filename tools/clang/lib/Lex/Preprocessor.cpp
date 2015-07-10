@@ -176,6 +176,7 @@ void Preprocessor::Initialize(const TargetInfo &Target) {
   this->Target = &Target;
   
   // Initialize information about built-ins.
+  // TODO: zet, add Builtin function in here?
   BuiltinInfo.InitializeTarget(Target);
   HeaderInfo.setTarget(Target);
 }
