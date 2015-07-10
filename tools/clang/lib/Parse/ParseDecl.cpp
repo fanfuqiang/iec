@@ -1607,6 +1607,8 @@ Parser::DeclGroupPtrTy Parser::ParseTypeDeclaration(unsigned Context,
 ///   input_declaration ';'
 ///   {input_declaration ';'}
 ///   'END_VAR'
+/// input_declaration := var_init_decl | edge_declaration
+/// var_init_decl := identifier {',' identifier} ':' type
 ///
 void Parser::ParseVariableDeclarations(Decl *TagDecl) {
   SourceLocation InputLoc;
@@ -1616,25 +1618,38 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
   ParsingDeclarator DeclaratorInfo(*this, DS, Declarator::MemberContext);
   //const char *VarKindName;
   tok::TokenKind VarKind = Tok.getKind();
+  
+
 
   switch (VarKind) {
   case tok::kw_var:
 
   case tok::kw_var_input: {
-    //VarKindName = "VAR_INPUT";
-    InputLoc = ConsumeToken();
     // TODO: Parse ['retain' | 'no_retain'].
-    ParseIdentifier(DeclaratorInfo);
-    // Error parsing the declarator?
-    if (!DeclaratorInfo.hasName()) {
-      Diag(Tok, diag::err_expected_ident_after) << tok::getTokenName(VarKind);
-      // If so, skip until the ':' or a ';'.
-      SkipUntil(tok::colon, true, true);
-      if (Tok.is(tok::semi))
-        ConsumeToken();
-      return;
+    // var_init_decl := identifier {',' identifier} ':' type
+    // Build up an array of information about the parsed arguments.
+    SmallVector<DeclaratorChunk::ParamInfo, 16> ParamInfo;
+    InputLoc = ConsumeToken();
+    while (1) {
+      ParseIdentifier(DeclaratorInfo);
+      // Error parsing the declarator?
+      if (!DeclaratorInfo.hasName()) {
+        Diag(Tok, diag::err_expected_ident_after) << tok::getTokenName(VarKind);
+        // If so, skip until the ':' or a ';'.
+        SkipUntil(tok::colon, true, true);
+        if (Tok.is(tok::semi))
+          ConsumeToken();
+        return;
+      }
+      if (Tok.is(tok::colon))
+        break;
     }
-
+    // Current token should be ':'. 
+    ExpectAndConsume(tok::colon, diag::err_expected_colon_after,
+                     "io_var identifiers", tok::kw_var_input);
+    
+    
+    
 
   }
   case tok::kw_var_in_out:
@@ -1643,7 +1658,8 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
   case tok::kw_var_global:
   case tok::kw_var_temp:
   default:
-    Diag(Tok, diag::err_expected_var_declaration_keyword);
+    // Fall through, parse the function body.
+    //Diag(Tok, diag::err_expected_var_declaration_keyword);
   }
 
   return;
