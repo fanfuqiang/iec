@@ -1616,9 +1616,18 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
   ParsingDeclSpec DS(*this);
   // Parse the var name.
   ParsingDeclarator DeclaratorInfo(*this, DS, Declarator::MemberContext);
-  //const char *VarKindName;
+  // const char *VarKindName;
   tok::TokenKind VarKind = Tok.getKind();
-  
+  // Simple local struct contain identifiers temporarily.
+  struct IdInfoAndLoc {
+    IdentifierInfo *IdInfo;
+    SourceLocation Loc;
+    //
+    void clear () {
+      IdInfo = 0;
+      Loc = SourceLocation();
+    }
+  };
 
 
   switch (VarKind) {
@@ -1629,9 +1638,13 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
     // var_init_decl := identifier {',' identifier} ':' type
     // Build up an array of information about the parsed arguments.
     SmallVector<DeclaratorChunk::ParamInfo, 16> ParamInfo;
+    SmallVector<IdInfoAndLoc, 8> Ids;
     InputLoc = ConsumeToken();
+    IdInfoAndLoc IIL = {Tok.getIdentifierInfo(), Tok.getLocation};
+    //
     while (1) {
-      ParseIdentifier(DeclaratorInfo);
+      //ParseIdentifier(DeclaratorInfo);
+      
       // Error parsing the declarator?
       if (!DeclaratorInfo.hasName()) {
         Diag(Tok, diag::err_expected_ident_after) << tok::getTokenName(VarKind);
@@ -1641,12 +1654,13 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
           ConsumeToken();
         return;
       }
+      // Identifier-list end.
       if (Tok.is(tok::colon))
         break;
     }
-    // Current token should be ':'. 
+    // Current token should be ':', if error occurs will eat and until 'end_var'.
     ExpectAndConsume(tok::colon, diag::err_expected_colon_after,
-                     "io_var identifiers", tok::kw_var_input);
+                     "io_var identifiers", tok::kw_end_var);
     
     
     
