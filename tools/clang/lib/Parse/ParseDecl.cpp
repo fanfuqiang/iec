@@ -1591,6 +1591,13 @@ Parser::DeclGroupPtrTy Parser::ParseTypeDeclaration(unsigned Context,
 
 }
 
+/// BuildDeclaratorFromVarInfos - Build one declarator from IdentifierInfo and the
+/// location infomation of the identifer.
+void Parser::BuildDeclaratorFromVarInfos(Declarator *D, IdentifierInfo *I,
+                                 SourceLocation S) {
+  D.SetIdentifier(I, S);
+}
+
 /// ParseVariableDeclarations - Parse the variable declarations.
 ///
 /// Handle the variable declarations like this:
@@ -1608,7 +1615,7 @@ Parser::DeclGroupPtrTy Parser::ParseTypeDeclaration(unsigned Context,
 ///   {input_declaration ';'}
 ///   'END_VAR'
 /// input_declaration := var_init_decl | edge_declaration
-/// var_init_decl := identifier {',' identifier} ':' type
+/// var_init_decl := identifier {',' identifier} ':' type ';'
 ///
 void Parser::ParseVariableDeclarations(Decl *TagDecl) {
   SourceLocation InputLoc;
@@ -1619,50 +1626,83 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
   // const char *VarKindName;
   tok::TokenKind VarKind = Tok.getKind();
   // Simple local struct contain identifiers temporarily.
-  struct IdInfoAndLoc {
+  class IdentInfoAndLoc {
+    // Local class, public data member is reasonable, i think.
     IdentifierInfo *IdInfo;
     SourceLocation Loc;
-    //
-    void clear () {
+
+  public:
+    IdentInfoAndLoc() : IdInfo(0), Loc(SourceLocation()) {}
+    IdentInfoAndLoc(IdentifierInfo *I, SourceLocation S) : IdInfo(I), Loc(S) {}
+    void clear() {
       IdInfo = 0;
       Loc = SourceLocation();
     }
+    IdentifierInfo *first() { return IdInfo; }
+    SourceLocation second() { return Loc; }
+    // If valid return false.
+    bool isValid() {
+      if (IdInfo)
+        return false;
+      return true;
+    }
   };
-
+  bool isError = false;
 
   switch (VarKind) {
   case tok::kw_var:
 
   case tok::kw_var_input: {
     // TODO: Parse ['retain' | 'no_retain'].
-    // var_init_decl := identifier {',' identifier} ':' type
-    // Build up an array of information about the parsed arguments.
-    SmallVector<DeclaratorChunk::ParamInfo, 16> ParamInfo;
-    SmallVector<IdInfoAndLoc, 8> Ids;
-    InputLoc = ConsumeToken();
-    IdInfoAndLoc IIL = {Tok.getIdentifierInfo(), Tok.getLocation};
-    //
+    InputLoc = ConsumeToken(); // eat the keyword: var_input
+    // Vector of IdInfoAndLoc object, NOT pointer.
+    // SmallVector.push_back() will copy the content of argument
+    SmallVector<IdentInfoAndLoc, 16> Ids;
+    // Remember identifier info.
+    IdentInfoAndLoc IIL, SingleIIL;
+    
+    // var_init_decl := identifier {',' identifier} ':' type ';'
     while (1) {
-      //ParseIdentifier(DeclaratorInfo);
-      
+      ParseIdentifier(DeclaratorInfo);
+      IIL = IdentInfoAndLoc(Tok.getIdentifierInfo(), Tok.getLocation);
+      ConsumeToken(); // eat current identifier
       // Error parsing the declarator?
-      if (!DeclaratorInfo.hasName()) {
+      if (!IIL.isValid()) {
         Diag(Tok, diag::err_expected_ident_after) << tok::getTokenName(VarKind);
         // If so, skip until the ':' or a ';'.
         SkipUntil(tok::colon, true, true);
-        if (Tok.is(tok::semi))
-          ConsumeToken();
         return;
       }
-      // Identifier-list end.
-      if (Tok.is(tok::colon))
+
+      Ids.push_back(IIL);
+      if (Tok.is(tok::comma)) {
+        ConsumeToken(); // eat the ','
+        // Parse the next identifier.
+        IIL.clear();
+      } else if (Tok.is(tok::colon)) { // identifier-list end
+        SingleIIL = IIL;
         break;
+      } else {
+        isError = true;
+        Diag(Tok, diag::err_expected_comma_or_colon);
+      }
     }
     // Current token should be ':', if error occurs will eat and until 'end_var'.
     ExpectAndConsume(tok::colon, diag::err_expected_colon_after,
                      "io_var identifiers", tok::kw_end_var);
-    
-    
+    ParseHeadTypeSpecification(DS);
+    if (isError) {
+      TagDecl->setInvalidDecl();
+      SkipUntil(tok::semi, false);
+      return;
+    }
+    if (SingleIIL.isValid()) {
+      DeclaratorInfo.SetIdentifier(SingleIIL.first(), SingleIIL.second());
+    } else {
+      for (unsigned i = 0; i != Ids.size; ++i) {
+        DeclaratorInfo.SetIdentifier(Ids.data()[i].first, Ids.data()[i].second);
+      }
+    }
     
 
   }
