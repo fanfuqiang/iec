@@ -1595,7 +1595,7 @@ Parser::DeclGroupPtrTy Parser::ParseTypeDeclaration(unsigned Context,
 /// location infomation of the identifer.
 void Parser::BuildDeclaratorFromVarInfos(Declarator *D, IdentifierInfo *I,
                                  SourceLocation S) {
-  D.SetIdentifier(I, S);
+  D->SetIdentifier(I, S);
 }
 
 /// ParseVariableDeclarations - Parse the variable declarations.
@@ -1618,14 +1618,16 @@ void Parser::BuildDeclaratorFromVarInfos(Declarator *D, IdentifierInfo *I,
 /// var_init_decl := identifier {',' identifier} ':' type ';'
 ///
 void Parser::ParseVariableDeclarations(Decl *TagDecl) {
-  SourceLocation InputLoc;
+  // Variable declaration start location.
+  SourceLocation VDStart = Tok.getLocation();
   // Parse the common declaration-specifiers piece.
   ParsingDeclSpec DS(*this);
   // Parse the var name.
   ParsingDeclarator DeclaratorInfo(*this, DS, Declarator::MemberContext);
-  // const char *VarKindName;
   tok::TokenKind VarKind = Tok.getKind();
-  // Simple local struct contain identifiers temporarily.
+  // 
+  SmallVector<DeclaratorChunk::ParamInfo, 16> ParamInfo;
+  // Simple local struct contain identifiers info temporarily.
   class IdentInfoAndLoc {
     // Local class, public data member is reasonable, i think.
     IdentifierInfo *IdInfo;
@@ -1640,43 +1642,47 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
     }
     IdentifierInfo *first() { return IdInfo; }
     SourceLocation second() { return Loc; }
-    // If valid return false.
+    // If valid return true.
     bool isValid() {
       if (IdInfo)
-        return false;
-      return true;
+        return true;
+      return false;
     }
   };
+  // Maintain error info.
   bool isError = false;
+  unsigned DiagID;
 
   switch (VarKind) {
   case tok::kw_var:
 
   case tok::kw_var_input: {
     // TODO: Parse ['retain' | 'no_retain'].
-    InputLoc = ConsumeToken(); // eat the keyword: var_input
+    ConsumeToken(); // eat the keyword: var_input
     // Vector of IdInfoAndLoc object, NOT pointer.
     // SmallVector.push_back() will copy the content of argument
-    SmallVector<IdentInfoAndLoc, 16> Ids;
+    SmallVector<IdentInfoAndLoc, 8> Ids;
     // Remember identifier info.
     IdentInfoAndLoc IIL, SingleIIL;
     
     // var_init_decl := identifier {',' identifier} ':' type ';'
-    while (1) {
-      ParseIdentifier(DeclaratorInfo);
+    while (!isError) {
       IIL = IdentInfoAndLoc(Tok.getIdentifierInfo(), Tok.getLocation);
       ConsumeToken(); // eat current identifier
       // Error parsing the declarator?
-      if (!IIL.isValid()) {
+      if (IIL.isValid()) {
         Diag(Tok, diag::err_expected_ident_after) << tok::getTokenName(VarKind);
         // If so, skip until the ':' or a ';'.
         SkipUntil(tok::colon, true, true);
         return;
       }
-
-      Ids.push_back(IIL);
+      // After has parsed a identifier, after the identifier has three situation:
+      // If is a ',' -> preserve current identifer and parse the next one.
+      // If is a ':' -> parse the type.
+      // If is other -> error.
       if (Tok.is(tok::comma)) {
         ConsumeToken(); // eat the ','
+        Ids.push_back(IIL); // preserve the identifier info
         // Parse the next identifier.
         IIL.clear();
       } else if (Tok.is(tok::colon)) { // identifier-list end
@@ -1684,23 +1690,41 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
         break;
       } else {
         isError = true;
-        Diag(Tok, diag::err_expected_comma_or_colon);
+        DiagID = diag::err_expected_comma_or_colon;
       }
+    }
+    // Has error occurs?
+    if (isError) {
+      TagDecl->setInvalidDecl();
+      Diag(Tok, DiagID);
+      SkipUntil(tok::semi, false);
+      return;
     }
     // Current token should be ':', if error occurs will eat and until 'end_var'.
     ExpectAndConsume(tok::colon, diag::err_expected_colon_after,
                      "io_var identifiers", tok::kw_end_var);
     ParseHeadTypeSpecification(DS);
-    if (isError) {
-      TagDecl->setInvalidDecl();
-      SkipUntil(tok::semi, false);
-      return;
+    // If no parameter was specified, verify that *something* was specified,
+    // otherwise we have a missing type and identifier.
+    if (DS.isEmpty() && Ids.size == 0) {
+      // Completely missing, emit error.
+      Diag(VDStart, diag::err_missing_param);
     }
+
+    Decl *Param;
     if (SingleIIL.isValid()) {
       DeclaratorInfo.SetIdentifier(SingleIIL.first(), SingleIIL.second());
+      // Otherwise, we have something.  Add it and let semantic analysis try
+      // to grok it and add the result to the ParamInfo we are building.
+
+      // Inform the actions module about the parameter declarator, so it gets
+      // added to the current scope.
+      Param = Actions.ActOnParamDeclarator(getCurScope(), DeclaratorInfo);
     } else {
       for (unsigned i = 0; i != Ids.size; ++i) {
+        // Build declarators using preserved identifier infos.
         DeclaratorInfo.SetIdentifier(Ids.data()[i].first, Ids.data()[i].second);
+        Param = Actions.ActOnParamDeclarator(getCurScope(), DeclaratorInfo);
       }
     }
     
