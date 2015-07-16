@@ -1642,16 +1642,16 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
     }
     IdentifierInfo *first() { return IdInfo; }
     SourceLocation second() { return Loc; }
-    // If valid return true.
-    bool isValid() {
-      if (IdInfo)
-        return true;
-      return false;
+    // If invalid return true.
+    bool isInValid() {
+      if (IdInfo && Loc.isValid())
+        return false;
+      return true;
     }
   };
-  // Maintain error info.
-  bool isError = false;
-  unsigned DiagID;
+  // If error happens set this true.
+  bool isInvalid = false;
+  //unsigned DiagID;
 
   switch (VarKind) {
   case tok::kw_var:
@@ -1660,21 +1660,20 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
     // TODO: Parse ['retain' | 'no_retain'].
     ConsumeToken(); // eat the keyword: var_input
     // Vector of IdInfoAndLoc object, NOT pointer.
-    // SmallVector.push_back() will copy the content of argument
+    // SmallVector.push_back() will copy the content of argument.
     SmallVector<IdentInfoAndLoc, 8> Ids;
-    // Remember identifier info.
-    IdentInfoAndLoc IIL, SingleIIL;
-    
+    // Judge this declaration only has one identifier denpend on the state of SingleIIL.
+    // so the definition must be here out of the while(1) statement.
+    IdentInfoAndLoc SingleIIL;
     // var_init_decl := identifier {',' identifier} ':' type ';'
-    while (!isError) {
-      IIL = IdentInfoAndLoc(Tok.getIdentifierInfo(), Tok.getLocation);
+    while (1) {
+      IdentInfoAndLoc IIL = IdentInfoAndLoc(Tok.getIdentifierInfo(), Tok.getLocation);
       ConsumeToken(); // eat current identifier
       // Error parsing the declarator?
-      if (IIL.isValid()) {
+      if (!IIL.isInValid()) {
+        isInvalid = true;
         Diag(Tok, diag::err_expected_ident_after) << tok::getTokenName(VarKind);
-        // If so, skip until the ':' or a ';'.
-        SkipUntil(tok::colon, true, true);
-        return;
+        break;
       }
       // After has parsed a identifier, after the identifier has three situation:
       // If is a ',' -> preserve current identifer and parse the next one.
@@ -1684,35 +1683,34 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
         ConsumeToken(); // eat the ','
         Ids.push_back(IIL); // preserve the identifier info
         // Parse the next identifier.
-        IIL.clear();
-      } else if (Tok.is(tok::colon)) { // identifier-list end
-        SingleIIL = IIL;
+        //IIL.clear();
+      } else if (SingleIIL.isInValid() && Tok.is(tok::colon)) { // only ont identifer?
+        IdentInfoAndLoc SingleIIL = IIL;
         break;
       } else {
-        isError = true;
-        DiagID = diag::err_expected_comma_or_colon;
+        isInvalid = true;
+        Diag(Tok, diag::err_expected_comma_or_colon);
+        // Skip and break the unlimited while.
+        break;
       }
     }
-    // Has error occurs?
-    if (isError) {
-      TagDecl->setInvalidDecl();
-      Diag(Tok, DiagID);
-      SkipUntil(tok::semi, false);
-      return;
-    }
+    if (isInvalid)
+      break; // jump out of this switch
     // Current token should be ':', if error occurs will eat and until 'end_var'.
     ExpectAndConsume(tok::colon, diag::err_expected_colon_after,
                      "io_var identifiers", tok::kw_end_var);
     ParseHeadTypeSpecification(DS);
     // If no parameter was specified, verify that *something* was specified,
     // otherwise we have a missing type and identifier.
-    if (DS.isEmpty() && Ids.size == 0) {
+    if (DS.isEmpty() && (Ids.size == 0 || SingleIIL.isInValid())) {
       // Completely missing, emit error.
+      isInvalid = true;
       Diag(VDStart, diag::err_missing_param);
+      break;
     }
 
     Decl *Param;
-    if (SingleIIL.isValid()) {
+    if (!SingleIIL.isInValid()) {
       DeclaratorInfo.SetIdentifier(SingleIIL.first(), SingleIIL.second());
       // Otherwise, we have something.  Add it and let semantic analysis try
       // to grok it and add the result to the ParamInfo we are building.
@@ -1738,6 +1736,12 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
   default:
     // Fall through, parse the function body.
     //Diag(Tok, diag::err_expected_var_declaration_keyword);
+  }
+
+  // Skip the total declaration statement.
+  if (isInvalid) {
+    TagDecl->setInvalidDecl();
+    SkipUntil(tok::semi, true, true);
   }
 
   return;
