@@ -1621,9 +1621,11 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
   // Variable declaration start location.
   SourceLocation VDStart = Tok.getLocation();
   // Parse the common declaration-specifiers piece.
-  ParsingDeclSpec DS(*this);
+  ParsingDeclSpec DS(*this), Useless(*this);
   // Parse the var name.
-  ParsingDeclarator DeclaratorInfo(*this, DS, Declarator::MemberContext);
+  // We make a imaginary ctor contain the var_inputs.
+  ParsingDeclarator VarDeclInfo(*this, DS, Declarator::MemberContext),
+                    ImagCtor(*this, Useless, Declarator::MemberContext);
   tok::TokenKind VarKind = Tok.getKind();
   // 
   SmallVector<DeclaratorChunk::ParamInfo, 16> ParamInfo;
@@ -1696,6 +1698,7 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
     }
     if (isInvalid)
       break; // jump out of this switch
+    SourceLocation SemiLoc = Tok.getLocation();
     // Current token should be ':', if error occurs will eat and until 'end_var'.
     ExpectAndConsume(tok::colon, diag::err_expected_colon_after,
                      "io_var identifiers", tok::kw_end_var);
@@ -1710,22 +1713,46 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
     }
 
     Decl *Param;
+    // Build up an array of information about the parsed arguments.
+    SmallVector<DeclaratorChunk::ParamInfo, 16> ParamInfo;
     if (!SingleIIL.isInValid()) {
-      DeclaratorInfo.SetIdentifier(SingleIIL.first(), SingleIIL.second());
+      VarDeclInfo.SetIdentifier(SingleIIL.first(), SingleIIL.second());
       // Otherwise, we have something.  Add it and let semantic analysis try
       // to grok it and add the result to the ParamInfo we are building.
 
       // Inform the actions module about the parameter declarator, so it gets
       // added to the current scope.
-      Param = Actions.ActOnParamDeclarator(getCurScope(), DeclaratorInfo);
+      Param = Actions.ActOnParamDeclarator(getCurScope(), VarDeclInfo);
     } else {
       for (unsigned i = 0; i != Ids.size; ++i) {
         // Build declarators using preserved identifier infos.
-        DeclaratorInfo.SetIdentifier(Ids.data()[i].first, Ids.data()[i].second);
-        Param = Actions.ActOnParamDeclarator(getCurScope(), DeclaratorInfo);
+        VarDeclInfo.SetIdentifier(Ids.data()[i].first, Ids.data()[i].second);
+        Param = Actions.ActOnParamDeclarator(getCurScope(), VarDeclInfo);
       }
     }
-    
+    ParsedAttributes FnAttrs(AttrFactory); // useless
+    // Remember that we parsed a function type, and remember the attributes.
+    ImagCtor.AddTypeInfo(DeclaratorChunk::getFunction(true, false,
+                                             VDStart,
+                                             ParamInfo.data(), ParamInfo.size(),
+                                             SourceLocation(), SemiLoc,
+                                             DS.getTypeQualifiers(),
+                                             true,
+                                             SourceLocation(), SourceLocation(),
+                                             SourceLocation(),
+                                             /*MutableLoc=*/SourceLocation(),
+                                             EST_None, SourceLocation(),
+                                             0,
+                                             0,
+                                             0,
+                                             0,
+                                             VDStart, SemiLoc, ImagCtor,
+                                             TypeResult()),
+                         FnAttrs, SemiLoc);
+
+
+
+
 
   }
   case tok::kw_var_in_out:
