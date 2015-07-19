@@ -1617,9 +1617,22 @@ void Parser::BuildDeclaratorFromVarInfos(Declarator *D, IdentifierInfo *I,
 /// input_declaration := var_init_decl | edge_declaration
 /// var_init_decl := identifier {',' identifier} ':' type ';'
 ///
-void Parser::ParseVariableDeclarations(Decl *TagDecl) {
+void Parser::ParseVariableDeclarations(SourceLocation StartLoc, Decl *TagDecl) {
   // Variable declaration start location.
   SourceLocation VDStart = Tok.getLocation();
+  SourceLocation EndLoc = Tok.getLocation();
+  // Enter a scope for the class.
+  ParseScope ClassScope(this, Scope::ClassScope|Scope::DeclScope);
+  // Note that we are parsing a new (potentially-nested) class definition.
+  ParsingClassDefinition ParsingDef(*this, TagDecl, true, false);
+  // 
+  if (TagDecl)
+    Actions.ActOnTagStartDefinition(getCurScope(), TagDecl);
+  // 
+  if (TagDecl)
+    Actions.ActOnStartCXXMemberDeclarations(getCurScope(), TagDecl, SourceLocation(),
+                                            VDStart);
+
   // Parse the common declaration-specifiers piece.
   ParsingDeclSpec DS(*this), Useless(*this);
   // Parse the var name.
@@ -1698,7 +1711,8 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
     }
     if (isInvalid)
       break; // jump out of this switch
-    SourceLocation SemiLoc = Tok.getLocation();
+
+    EndLoc = Tok.getLocation();
     // Current token should be ':', if error occurs will eat and until 'end_var'.
     ExpectAndConsume(tok::colon, diag::err_expected_colon_after,
                      "io_var identifiers", tok::kw_end_var);
@@ -1735,7 +1749,7 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
     ImagCtor.AddTypeInfo(DeclaratorChunk::getFunction(true, false,
                                              VDStart,
                                              ParamInfo.data(), ParamInfo.size(),
-                                             SourceLocation(), SemiLoc,
+                                             SourceLocation(), EndLoc,
                                              DS.getTypeQualifiers(),
                                              true,
                                              SourceLocation(), SourceLocation(),
@@ -1746,9 +1760,9 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
                                              0,
                                              0,
                                              0,
-                                             VDStart, SemiLoc, ImagCtor,
+                                             VDStart, EndLoc, ImagCtor,
                                              TypeResult()),
-                         FnAttrs, SemiLoc);
+                         FnAttrs, EndLoc);
 
 
 
@@ -1770,6 +1784,13 @@ void Parser::ParseVariableDeclarations(Decl *TagDecl) {
     TagDecl->setInvalidDecl();
     SkipUntil(tok::semi, true, true);
   }
+
+  //
+  if (TagDecl)
+    Actions.ActOnFinishCXXMemberSpecification(getCurScope(), StartLoc, TagDecl,
+                                              VDStart, 
+                                              EndLoc,
+                                              0);
 
   return;
 }
@@ -1817,7 +1838,7 @@ Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
   // Parse the function return type.
   ParseHeadTypeSpecification(DS);
   // Parse the var declarations
-  ParseVariableDeclarations(TagOrTempResult.get());
+  ParseVariableDeclarations(FunctionLoc ,TagOrTempResult.get());
   // Parse the funciton body.
   ParseCXXMemberSpecification(FunctionLoc, DeclSpec::TST_class,
                               TagOrTempResult.get());
