@@ -1625,7 +1625,7 @@ void Parser::ParseVariableDeclarations(SourceLocation StartLoc, Decl *TagDecl) {
   ParseScope ClassScope(this, Scope::ClassScope|Scope::DeclScope);
   // Note that we are parsing a new (potentially-nested) class definition.
   ParsingClassDefinition ParsingDef(*this, TagDecl, true, false);
-  // 
+  // Set the value of CurContext that means we will enter the tag context. 
   if (TagDecl)
     Actions.ActOnTagStartDefinition(getCurScope(), TagDecl);
   // 
@@ -1747,24 +1747,31 @@ void Parser::ParseVariableDeclarations(SourceLocation StartLoc, Decl *TagDecl) {
     ParsedAttributes FnAttrs(AttrFactory); // useless
     // Remember that we parsed a function type, and remember the attributes.
     ImagCtor.AddTypeInfo(DeclaratorChunk::getFunction(true, false,
-                                             VDStart,
-                                             ParamInfo.data(), ParamInfo.size(),
-                                             SourceLocation(), EndLoc,
-                                             DS.getTypeQualifiers(),
-                                             true,
-                                             SourceLocation(), SourceLocation(),
-                                             SourceLocation(),
-                                             /*MutableLoc=*/SourceLocation(),
-                                             EST_None, SourceLocation(),
-                                             0,
-                                             0,
-                                             0,
-                                             0,
-                                             VDStart, EndLoc, ImagCtor,
-                                             TypeResult()),
+                                                      VDStart,
+                                                      ParamInfo.data(), 
+                                                      ParamInfo.size(),
+                                                      SourceLocation(), EndLoc,
+                                                      DS.getTypeQualifiers(),
+                                                      true,
+                                                      SourceLocation(), 
+                                                      SourceLocation(),
+                                                      SourceLocation(),
+                                                      /*MutableLoc=*/SourceLocation(),
+                                                      EST_None, SourceLocation(),
+                                                      0,
+                                                      0,
+                                                      0,
+                                                      0,
+                                                      VDStart, EndLoc, ImagCtor,
+                                                      TypeResult()),
                          FnAttrs, EndLoc);
 
-
+    // 
+    Decl *Member;
+    //
+    Member = HandleDeclarator(S, D, 0);
+    if (!Member) {
+      return 0;
 
 
 
