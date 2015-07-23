@@ -1618,6 +1618,49 @@ void Parser::BuildDeclaratorFromVarInfos(Declarator *D, IdentifierInfo *I,
 /// var_init_decl := identifier {',' identifier} ':' type ';'
 ///
 void Parser::ParseVariableDeclarations(SourceLocation StartLoc, Decl *TagDecl) {
+  // Creat a new false class simulate class.
+  {
+  if (Tok.is(tok::annot_cxxscope)) {
+      // So we need to check whether the simple-template-id is of the
+      // right kind (it should name a type or be dependent), and then
+      // convert it into a type within the nested-name-specifier.
+      TemplateIdAnnotation *TemplateId 
+        = static_cast<TemplateIdAnnotation *>(Tok.getAnnotationValue());
+
+      if (TemplateId->Kind == TNK_Type_template || 
+          TemplateId->Kind == TNK_Dependent_template_name) {
+        AnnotateTemplateIdTokenAsType(&SS);
+        SS.setScopeRep(0);
+
+        assert(Tok.is(tok::annot_typename) && 
+               "AnnotateTemplateIdTokenAsType isn't working");
+        Token TypeToken = Tok;
+        ConsumeToken();
+        assert(Tok.is(tok::coloncolon) && "NextToken() not working properly!");
+        SourceLocation CCLoc = ConsumeToken();
+        
+        if (!HasScopeSpecifier) {
+          SS.setBeginLoc(TypeToken.getLocation());
+          HasScopeSpecifier = true;
+        }
+        
+        if (TypeToken.getAnnotationValue())
+          SS.setScopeRep(
+            Actions.ActOnCXXNestedNameSpecifier(CurScope, SS, 
+                                                TypeToken.getAnnotationValue(),
+                                                TypeToken.getAnnotationRange(),
+                                                CCLoc));
+        else
+          SS.setScopeRep(0);
+        SS.setEndLoc(CCLoc);
+        continue;
+      }
+      
+      assert(false && "FIXME: Only type template names supported here");
+    }
+ 
+  }
+
   // Variable declaration start location.
   SourceLocation VDStart = Tok.getLocation();
   SourceLocation EndLoc = Tok.getLocation();
@@ -1770,7 +1813,7 @@ void Parser::ParseVariableDeclarations(SourceLocation StartLoc, Decl *TagDecl) {
     Decl *Member;
     //
     Member = HandleDeclarator(S, D, 0);
-    if (!Member) {
+    if (!Member)
       return 0;
 
 
