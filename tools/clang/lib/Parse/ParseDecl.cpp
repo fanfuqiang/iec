@@ -1780,7 +1780,14 @@ void Parser::ParseVariableDeclarations(SourceLocation StartLoc, Decl *TagDecl) {
     Member = HandleDeclarator(S, D, 0);
     if (!Member)
       return 0;
-
+    DeclContext *DC = 0;
+    QualType R;
+    TypeSourceInfo *TInfo = 0;
+    bool isVirtualOkay = false;
+    // Creat new function semantic.
+    FunctionDecl *NewFD = CreateNewFunctionDecl(this->Actions, ImagCtor, DC, R,
+                                                TInfo, StorageClass::SC_None,
+                                                isVirtualOkay);
 
 
   }
