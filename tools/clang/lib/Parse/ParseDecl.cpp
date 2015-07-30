@@ -1680,6 +1680,7 @@ void Parser::ParseVariableDeclarations(SourceLocation StartLoc, Decl *TagDecl) {
   case tok::kw_var:
 
   case tok::kw_var_input: {
+    // Handled like : const type parameter of member function.
     // TODO: Parse ['retain' | 'no_retain'].
     ConsumeToken(); // eat the keyword: var_input
     // Vector of IdInfoAndLoc object, NOT pointer.
@@ -1721,7 +1722,7 @@ void Parser::ParseVariableDeclarations(SourceLocation StartLoc, Decl *TagDecl) {
       break; // jump out of this switch
 
     EndLoc = Tok.getLocation();
-    // Current token should be ':', if error occurs will eat and until 'end_var'.
+    // Current token should be ':', if error occurs will eat until 'end_var'.
     ExpectAndConsume(tok::colon, diag::err_expected_colon_after,
                      "io_var identifiers", tok::kw_end_var);
     ParseHeadTypeSpecification(DS);
@@ -1764,8 +1765,9 @@ void Parser::ParseVariableDeclarations(SourceLocation StartLoc, Decl *TagDecl) {
                                                       SourceLocation(), 
                                                       SourceLocation(),
                                                       SourceLocation(),
-                                                      /*MutableLoc=*/SourceLocation(),
-                                                      EST_None, SourceLocation(),
+                                                      SourceLocation(),
+                                                      EST_None,
+                                                      SourceLocation(),
                                                       0,
                                                       0,
                                                       0,
@@ -1777,7 +1779,7 @@ void Parser::ParseVariableDeclarations(SourceLocation StartLoc, Decl *TagDecl) {
     // 
     Decl *Member;
     //
-    Member = HandleDeclarator(S, D, 0);
+    Member = Actions.HandleDeclarator(S, D, 0);
     if (!Member)
       return 0;
     DeclContext *DC = 0;
@@ -1785,9 +1787,14 @@ void Parser::ParseVariableDeclarations(SourceLocation StartLoc, Decl *TagDecl) {
     TypeSourceInfo *TInfo = 0;
     bool isVirtualOkay = false;
     // Creat new function semantic.
-    FunctionDecl *NewFD = CreateNewFunctionDecl(this->Actions, ImagCtor, DC, R,
-                                                TInfo, StorageClass::SC_None,
+    // CreateNewFunctionDecl is a static function, defined at SemaDecl.cpp.
+    FunctionDecl *NewFD = CreateNewFunctionDecl(this->Actions, ImagCtor,
+                                                DC, R, TInfo,
+                                                StorageClass::SC_None,
                                                 isVirtualOkay);
+    // Do Sema for the imaginary constructor which contains variables.
+    Actions.ActOnDeclarator(getCurScope(), ImagCtor);
+
 
 
   }
