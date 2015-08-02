@@ -1617,7 +1617,8 @@ void Parser::BuildDeclaratorFromVarInfos(Declarator *D, IdentifierInfo *I,
 /// input_declaration := var_init_decl | edge_declaration
 /// var_init_decl := identifier {',' identifier} ':' type ';'
 ///
-void Parser::ParseVariableDeclarations(SourceLocation StartLoc, Decl *TagDecl) {
+void Parser::ParseVariableDeclarations(tok::TokenKind POCKind, 
+                                       SourceLocation StartLoc, Decl *TagDecl) {
   // Variable declaration start location.
   SourceLocation VDStart = Tok.getLocation();
   SourceLocation EndLoc = Tok.getLocation();
@@ -1648,7 +1649,8 @@ void Parser::ParseVariableDeclarations(SourceLocation StartLoc, Decl *TagDecl) {
   // Scope.
   Actions.ActOnCXXNestedNameSpecifier(getCurScope(), II, SourceLocation(),
                                       SourceLocation(), ParsedType(),
-                                      EnteringContext, ImagCtor.getCXXScopeSpec());
+                                      EnteringContext, 
+                                      ImagCtor.getCXXScopeSpec());
 
   // Simple local struct contain identifiers info temporarily.
   class IdentInfoAndLoc {
@@ -1672,12 +1674,16 @@ void Parser::ParseVariableDeclarations(SourceLocation StartLoc, Decl *TagDecl) {
       return true;
     }
   };
+
   // If error happens set this true.
   bool isInvalid = false;
   //unsigned DiagID;
 
   switch (VarKind) {
-  case tok::kw_var:
+  case tok::kw_var: {
+    
+    break;                  
+  }
 
   case tok::kw_var_input: {
     // Handled like : const type parameter of member function.
@@ -1787,7 +1793,7 @@ void Parser::ParseVariableDeclarations(SourceLocation StartLoc, Decl *TagDecl) {
     TypeSourceInfo *TInfo = 0;
     bool isVirtualOkay = false;
     // Creat new function semantic.
-    // CreateNewFunctionDecl is a static function, defined at SemaDecl.cpp.
+    // CreateNewFunctionDecl is a static function, move to SemaDecl.cpp.
     FunctionDecl *NewFD = CreateNewFunctionDecl(this->Actions, ImagCtor,
                                                 DC, R, TInfo,
                                                 StorageClass::SC_None,
@@ -1801,8 +1807,26 @@ void Parser::ParseVariableDeclarations(SourceLocation StartLoc, Decl *TagDecl) {
   case tok::kw_var_in_out:
   case tok::kw_var_output:
   case tok::kw_var_external:
+    if (POCKind == tok::kw_function) {
+      isInvalid = true;
+      break;
+    }
+
+    break;
   case tok::kw_var_global:
+    if (POCKind == tok::kw_function) {
+      isInvalid = true;
+      break;
+    }
+
+    break;
   case tok::kw_var_temp:
+    if (POCKind == tok::kw_function) {
+      isInvalid = true;
+      break;
+    }
+
+    break;
   default:
     // Fall through, parse the function body.
     //Diag(Tok, diag::err_expected_var_declaration_keyword);
@@ -1835,6 +1859,7 @@ void Parser::ParseVariableDeclarations(SourceLocation StartLoc, Decl *TagDecl) {
 Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
                                                    SourceLocation &DeclEnd) {
   assert(Tok.is(tok::kw_function) && "Not a FUNCTION!");
+  tok::TokenKind TK = tok::kw_function;
   SourceLocation FunctionLoc = ConsumeToken();  // eat the 'function'
   if (Tok.getKind() != tok::identifier) {
     Diag(Tok, diag::err_expected_ident_after) << "FUNCTION";
@@ -1867,7 +1892,7 @@ Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
   // Parse the function return type.
   ParseHeadTypeSpecification(DS);
   // Parse the var declarations
-  ParseVariableDeclarations(FunctionLoc ,TagOrTempResult.get());
+  ParseVariableDeclarations(TK, FunctionLoc ,TagOrTempResult.get());
   // Parse the funciton body.
   ParseCXXMemberSpecification(FunctionLoc, DeclSpec::TST_class,
                               TagOrTempResult.get());

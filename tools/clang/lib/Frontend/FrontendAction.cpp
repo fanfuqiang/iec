@@ -328,6 +328,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
   // Initialize built-in info as long as we aren't using an external AST
   // source.
+  // zet, Add builtin function for st-lang?
   if (!CI.hasASTContext() || !CI.getASTContext().getExternalSource()) {
     Preprocessor &PP = CI.getPreprocessor();
     PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
