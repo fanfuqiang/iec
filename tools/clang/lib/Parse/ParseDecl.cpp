@@ -1783,11 +1783,11 @@ void Parser::ParseVariableDeclarations(tok::TokenKind POCKind,
                          FnAttrs, EndLoc);
 
     // 
-    Decl *Member;
+    //Decl *Member;
     //
-    Member = Actions.HandleDeclarator(S, D, 0);
-    if (!Member)
-      return 0;
+    //Member = Actions.HandleDeclarator(S, D, 0);
+    //if (!Member)
+      //return 0;
     DeclContext *DC = 0;
     QualType R;
     TypeSourceInfo *TInfo = 0;
@@ -1798,9 +1798,16 @@ void Parser::ParseVariableDeclarations(tok::TokenKind POCKind,
                                                 DC, R, TInfo,
                                                 StorageClass::SC_None,
                                                 isVirtualOkay);
+    NamedDecl *New;
     // Do Sema for the imaginary constructor which contains variables.
-    Actions.ActOnDeclarator(getCurScope(), ImagCtor);
-
+    New = dyn_cast<NamedDecl>(Actions.ActOnDeclarator(getCurScope(), ImagCtor));
+    //
+    // If this has an identifier and is not an invalid redeclaration or 
+    // function template specialization, add it to the scope stack.
+    if (New->getDeclName() && AddToScope &&
+      !(D.isRedeclaration() && New->isInvalidDecl()))
+      // Lots of sema things need to do.
+      PushOnScopeChains(New, S);
 
 
   }
