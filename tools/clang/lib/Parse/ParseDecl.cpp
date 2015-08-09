@@ -1808,6 +1808,39 @@ void Parser::ParseVariableDeclarations(tok::TokenKind POCKind,
       !(D.isRedeclaration() && New->isInvalidDecl()))
       // Lots of sema things need to do.
       PushOnScopeChains(New, S);
+    //
+    // Copy the parameter declarations from the declarator D to the function
+    // declaration NewFD, if they are available.  First scavenge them into Params.
+    SmallVector<ParmVarDecl*, 16> Params;
+    if (D.isFunctionDeclarator()) {
+      DeclaratorChunk::FunctionTypeInfo &FTI = ImagCtor.getFunctionTypeInfo();
+
+      // Check for C99 6.7.5.3p10 - foo(void) is a non-varargs
+      // function that takes no arguments, not a function that takes a
+      // single void argument.
+      // We let through "const void" here because Sema::GetTypeForDeclarator
+      // already checks for that case.
+      if (FTI.NumArgs == 1 && !FTI.isVariadic && FTI.ArgInfo[0].Ident == 0 &&
+          FTI.ArgInfo[0].Param &&
+        cast<ParmVarDecl>(FTI.ArgInfo[0].Param)->getType()->isVoidType()) {
+        // Empty arg list, don't push any params.
+        //checkVoidParamDecl(cast<ParmVarDecl>(FTI.ArgInfo[0].Param));
+      } else if (FTI.NumArgs > 0 && FTI.ArgInfo[0].Param != 0) {
+        for (unsigned i = 0, e = FTI.NumArgs; i != e; ++i) {
+          ParmVarDecl *Param = cast<ParmVarDecl>(FTI.ArgInfo[i].Param);
+          assert(Param->getDeclContext() != NewFD && "Was set before ?");
+          Param->setDeclContext(NewFD);
+          Params.push_back(Param);
+
+          if (Param->isInvalidDecl())
+            NewFD->setInvalidDecl();
+        }
+      }
+
+    }
+    // Finally, we know we have the right number of parameters, install them.
+    NewFD->setParams(Params);
+
 
 
   }
