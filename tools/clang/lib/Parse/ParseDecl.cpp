@@ -1612,16 +1612,16 @@ void Parser::BuildDeclaratorFromVarInfos(Declarator *D, IdentifierInfo *I,
 /// input_declarations :=
 ///   'VAR_INPUT' ['retain' | 'no_retain']
 ///   input_declaration ';'
-///   {input_declaration ';'}
+///   { input_declaration ';'}
 ///   'END_VAR'
 /// input_declaration := var_init_decl | edge_declaration
-/// var_init_decl := identifier {',' identifier} ':' type ';'
+/// var_init_decl := identifier {',' identifier } ':' type ';'
 ///
 void Parser::ParseVariableDeclarations(tok::TokenKind POCKind, 
                                        SourceLocation StartLoc, Decl *TagDecl) {
   // Variable declaration start location.
-  SourceLocation VDStart = Tok.getLocation();
-  SourceLocation EndLoc = Tok.getLocation();
+  SourceLocation VarsKeywordLoc = Tok.getLocation();
+  SourceLocation EndVarKeywordLoc;
   // Enter a scope for the class.
   ParseScope ClassScope(this, Scope::ClassScope|Scope::DeclScope);
   // Note that we are parsing a new (potentially-nested) class definition.
@@ -1888,7 +1888,10 @@ void Parser::ParseVariableDeclarations(tok::TokenKind POCKind,
   return;
 }
 
-/// ParseFunctionDeclaration - Parse the function declaration.
+/// ParseFunctionDeclaration - Parse the function declaration. Now we will creat
+/// a class which has 'derived_function_name' as its name. Vars semantics will
+/// done as the function ParseVariableDeclarations() specificated.
+/// 
 /// function_declaration ::=
 ///   'function' derived_function_name ':'
 ///       (elementary_type_name | derived_type_name)
@@ -1905,7 +1908,9 @@ Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
     Diag(Tok, diag::err_expected_ident_after) << "FUNCTION";
     return DeclGroupPtrTy();
   }
-  DeclSpec::TST TagType = DeclSpec::TST_function;
+  // TST_function or TST_class
+  //DeclSpec::TST TagType = DeclSpec::TST_function;
+  DeclSpec::TST TagType = DeclSpec::TST_class;
   // Parse the return type.
   ParsingDeclSpec DS(*this);
   // Parse the function name.
