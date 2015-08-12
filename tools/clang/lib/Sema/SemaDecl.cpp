@@ -8553,6 +8553,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
                      TypeResult UnderlyingType) {
   // If this is not a definition, it must have a name.
   IdentifierInfo *OrigName = Name;
+  assert(Name && "POC name is empty!");
   assert((Name != 0 || TUK == TUK_Definition) &&
          "Nameless record must be a definition!");
   assert(TemplateParameterLists.size() == 0 || TUK != TUK_Reference);
@@ -8560,76 +8561,17 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
   OwnedDecl = false;
   TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
   bool ScopedEnum = ScopedEnumKWLoc.isValid();
+  // zet
+  assert(!ScopedEnum && "the argument ScopedEnumKWLoc of ActOnTag() error");
 
   // FIXME: Check explicit specializations more carefully.
   bool isExplicitSpecialization = false;
   bool Invalid = false;
 
-  // We only need to do this matching if we have template parameters
-  // or a scope specifier, which also conveniently avoids this work
-  // for non-C++ cases.
-  if (TemplateParameterLists.size() > 0 ||
-      (SS.isNotEmpty() && TUK != TUK_Reference)) {
-    if (TemplateParameterList *TemplateParams
-          = MatchTemplateParametersToScopeSpecifier(KWLoc, NameLoc, SS,
-                                                TemplateParameterLists.data(),
-                                                TemplateParameterLists.size(),
-                                                    TUK == TUK_Friend,
-                                                    isExplicitSpecialization,
-                                                    Invalid)) {
-      if (TemplateParams->size() > 0) {
-        // This is a declaration or definition of a class template (which may
-        // be a member of another template).
-
-        if (Invalid)
-          return 0;
-
-        OwnedDecl = false;
-        DeclResult Result = CheckClassTemplate(S, TagSpec, TUK, KWLoc,
-                                               SS, Name, NameLoc, Attr,
-                                               TemplateParams, AS,
-                                               ModulePrivateLoc,
-                                               TemplateParameterLists.size()-1,
-                                               TemplateParameterLists.data());
-        return Result.get();
-      } else {
-        // The "template<>" header is extraneous.
-        Diag(TemplateParams->getTemplateLoc(), diag::err_template_tag_noparams)
-          << TypeWithKeyword::getTagTypeKindName(Kind) << Name;
-        isExplicitSpecialization = true;
-      }
-    }
-  }
-
   // Figure out the underlying type if this a enum declaration. We need to do
   // this early, because it's needed to detect if this is an incompatible
   // redeclaration.
   llvm::PointerUnion<const Type*, TypeSourceInfo*> EnumUnderlying;
-
-  if (Kind == TTK_Enum) {
-    if (UnderlyingType.isInvalid() || (!UnderlyingType.get() && ScopedEnum))
-      // No underlying type explicitly specified, or we failed to parse the
-      // type, default to int.
-      EnumUnderlying = Context.IntTy.getTypePtr();
-    else if (UnderlyingType.get()) {
-      // C++0x 7.2p2: The type-specifier-seq of an enum-base shall name an
-      // integral type; any cv-qualification is ignored.
-      TypeSourceInfo *TI = 0;
-      GetTypeFromParser(UnderlyingType.get(), &TI);
-      EnumUnderlying = TI;
-
-      if (CheckEnumUnderlyingType(TI))
-        // Recover by falling back to int.
-        EnumUnderlying = Context.IntTy.getTypePtr();
-
-      if (DiagnoseUnexpandedParameterPack(TI->getTypeLoc().getBeginLoc(), TI,
-                                          UPPC_FixedUnderlyingType))
-        EnumUnderlying = Context.IntTy.getTypePtr();
-
-    } else if (getLangOpts().MicrosoftMode)
-      // Microsoft enums are always of int type.
-      EnumUnderlying = Context.IntTy.getTypePtr();
-  }
 
   DeclContext *SearchDC = CurContext;
   DeclContext *DC = CurContext;
@@ -8641,68 +8583,15 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
 
   LookupResult Previous(*this, Name, NameLoc, LookupTagName, Redecl);
 
-  if (Name && SS.isNotEmpty()) {
-    // We have a nested-name tag ('struct foo::bar').
-
-    // Check for invalid 'foo::'.
-    if (SS.isInvalid()) {
-      Name = 0;
-      goto CreateNewDecl;
-    }
-
-    // If this is a friend or a reference to a class in a dependent
-    // context, don't try to make a decl for it.
-    if (TUK == TUK_Friend || TUK == TUK_Reference) {
-      DC = computeDeclContext(SS, false);
-      if (!DC) {
-        IsDependent = true;
-        return 0;
-      }
-    } else {
-      DC = computeDeclContext(SS, true);
-      if (!DC) {
-        Diag(SS.getRange().getBegin(), diag::err_dependent_nested_name_spec)
-          << SS.getRange();
-        return 0;
-      }
-    }
-
-    if (RequireCompleteDeclContext(SS, DC))
-      return 0;
-
-    SearchDC = DC;
-    // Look-up name inside 'foo::'.
-    LookupQualifiedName(Previous, DC);
-
-    if (Previous.isAmbiguous())
-      return 0;
-
-    if (Previous.empty()) {
-      // Name lookup did not find anything. However, if the
-      // nested-name-specifier refers to the current instantiation,
-      // and that current instantiation has any dependent base
-      // classes, we might find something at instantiation time: treat
-      // this as a dependent elaborated-type-specifier.
-      // But this only makes any sense for reference-like lookups.
-      if (Previous.wasNotFoundInCurrentInstantiation() &&
-          (TUK == TUK_Reference || TUK == TUK_Friend)) {
-        IsDependent = true;
-        return 0;
-      }
-
-      // A tag 'foo::bar' must already exist.
-      Diag(NameLoc, diag::err_not_tag_in_scope) 
-        << Kind << Name << DC << SS.getRange();
-      Name = 0;
-      Invalid = true;
-      goto CreateNewDecl;
-    }
-  } else if (Name) {
+  if (Name) {
     // If this is a named struct, check to see if there was a previous forward
     // declaration or definition.
     // FIXME: We're looking into outer scopes here, even when we
     // shouldn't be. Doing so can result in ambiguities that we
     // shouldn't be diagnosing.
+    // zet
+    // TODO: deal with redeclaration
+#if 0
     LookupName(Previous, S);
 
     if (Previous.isAmbiguous() && 
@@ -8728,23 +8617,18 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
       while (isa<RecordDecl>(SearchDC) || isa<EnumDecl>(SearchDC))
         SearchDC = SearchDC->getParent();
     }
+#endif
   } else if (S->isFunctionPrototypeScope()) {
     // If this is an enum declaration in function prototype scope, set its
     // initial context to the translation unit.
     // FIXME: [citation needed]
+    assert(0 && "zet, stay or clean?");
     SearchDC = Context.getTranslationUnitDecl();
-  }
-
-  if (Previous.isSingleResult() &&
-      Previous.getFoundDecl()->isTemplateParameter()) {
-    // Maybe we will complain about the shadowed template parameter.
-    DiagnoseTemplateParameterShadow(NameLoc, Previous.getFoundDecl());
-    // Just pretend that we didn't see the previous declaration.
-    Previous.clear();
   }
 
   if (getLangOpts().CPlusPlus && Name && DC && StdNamespace &&
       DC->Equals(getStdNamespace()) && Name->isStr("bad_alloc")) {
+    assert(0 && "zet, how clang implementate std::bad_alloc");
     // This is a declaration of or a reference to "std::bad_alloc".
     isStdBadAlloc = true;
     
@@ -8756,73 +8640,8 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
     }
   }
 
-  // If we didn't find a previous declaration, and this is a reference
-  // (or friend reference), move to the correct scope.  In C++, we
-  // also need to do a redeclaration lookup there, just in case
-  // there's a shadow friend decl.
-  if (Name && Previous.empty() &&
-      (TUK == TUK_Reference || TUK == TUK_Friend)) {
-    if (Invalid) goto CreateNewDecl;
-    assert(SS.isEmpty());
-
-    if (TUK == TUK_Reference) {
-      // C++ [basic.scope.pdecl]p5:
-      //   -- for an elaborated-type-specifier of the form
-      //
-      //          class-key identifier
-      //
-      //      if the elaborated-type-specifier is used in the
-      //      decl-specifier-seq or parameter-declaration-clause of a
-      //      function defined in namespace scope, the identifier is
-      //      declared as a class-name in the namespace that contains
-      //      the declaration; otherwise, except as a friend
-      //      declaration, the identifier is declared in the smallest
-      //      non-class, non-function-prototype scope that contains the
-      //      declaration.
-      //
-      // C99 6.7.2.3p8 has a similar (but not identical!) provision for
-      // C structs and unions.
-      //
-      // It is an error in C++ to declare (rather than define) an enum
-      // type, including via an elaborated type specifier.  We'll
-      // diagnose that later; for now, declare the enum in the same
-      // scope as we would have picked for any other tag type.
-      //
-      // GNU C also supports this behavior as part of its incomplete
-      // enum types extension, while GNU C++ does not.
-      //
-      // Find the context where we'll be declaring the tag.
-      // FIXME: We would like to maintain the current DeclContext as the
-      // lexical context,
-      while (!SearchDC->isFileContext() && !SearchDC->isFunctionOrMethod())
-        SearchDC = SearchDC->getParent();
-
-      // Find the scope where we'll be declaring the tag.
-      while (S->isClassScope() ||
-             (getLangOpts().CPlusPlus &&
-              S->isFunctionPrototypeScope()) ||
-             ((S->getFlags() & Scope::DeclScope) == 0) ||
-             (S->getEntity() &&
-              ((DeclContext *)S->getEntity())->isTransparentContext()))
-        S = S->getParent();
-    } else {
-      assert(TUK == TUK_Friend);
-      // C++ [namespace.memdef]p3:
-      //   If a friend declaration in a non-local class first declares a
-      //   class or function, the friend class or function is a member of
-      //   the innermost enclosing namespace.
-      SearchDC = SearchDC->getEnclosingNamespaceContext();
-    }
-
-    // In C++, we need to do a redeclaration lookup to properly
-    // diagnose some problems.
-    if (getLangOpts().CPlusPlus) {
-      Previous.setRedeclarationKind(ForRedeclaration);
-      LookupQualifiedName(Previous, SearchDC);
-    }
-  }
-
   if (!Previous.empty()) {
+    assert(0 && "TODO, previous declaration is not empty");
     NamedDecl *PrevDecl = (*Previous.begin())->getUnderlyingDecl();
 
     // It's okay to have a tag decl in the same scope as a typedef
@@ -9049,9 +8868,10 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
 CreateNewDecl:
 
   TagDecl *PrevDecl = 0;
-  if (Previous.isSingleResult())
+  if (Previous.isSingleResult()) {
+    assert(0 && "TODO, previous");
     PrevDecl = cast<TagDecl>(Previous.getFoundDecl());
-
+  }
   // If there is an identifier, use the location of the identifier as the
   // location of the decl, otherwise use the location of the struct/union
   // keyword.
@@ -9064,6 +8884,7 @@ CreateNewDecl:
 
   bool IsForwardReference = false;
   if (Kind == TTK_Enum) {
+    assert(0 && "zet, enum?");
     // FIXME: Tag decls should be chained to any simultaneous vardecls, e.g.:
     // enum X { A, B, C } D;    D should chain to X.
     New = EnumDecl::Create(Context, SearchDC, KWLoc, Loc, Name,
@@ -9110,20 +8931,20 @@ CreateNewDecl:
 
     // FIXME: Tag decls should be chained to any simultaneous vardecls, e.g.:
     // struct X { int A; } D;    D should chain to X.
-    if (getLangOpts().CPlusPlus) {
+    //if (getLangOpts().CPlusPlus) {
       // FIXME: Look for a way to use RecordDecl for simple structs.
       New = CXXRecordDecl::Create(Context, Kind, SearchDC, KWLoc, Loc, Name,
                                   cast_or_null<CXXRecordDecl>(PrevDecl));
-
-      if (isStdBadAlloc && (!StdBadAlloc || getStdBadAlloc()->isImplicit()))
-        StdBadAlloc = cast<CXXRecordDecl>(New);
-    } else
-      New = RecordDecl::Create(Context, Kind, SearchDC, KWLoc, Loc, Name,
-                               cast_or_null<RecordDecl>(PrevDecl));
+      //if (isStdBadAlloc && (!StdBadAlloc || getStdBadAlloc()->isImplicit()))
+        //StdBadAlloc = cast<CXXRecordDecl>(New);
+    //} else
+      //New = RecordDecl::Create(Context, Kind, SearchDC, KWLoc, Loc, Name,
+        //                       cast_or_null<RecordDecl>(PrevDecl));
   }
 
   // Maybe add qualifier info.
   if (SS.isNotEmpty()) {
+    assert(0 && "zet, CXXScopeSpec has be specificated?");
     if (SS.isSet()) {
       // If this is either a declaration or a definition, check the 
       // nested-name-specifier against the current context. We don't do this
@@ -9162,96 +8983,54 @@ CreateNewDecl:
     }
   }
 
-  if (ModulePrivateLoc.isValid()) {
-    if (isExplicitSpecialization)
-      Diag(New->getLocation(), diag::err_module_private_specialization)
-        << 2
-        << FixItHint::CreateRemoval(ModulePrivateLoc);
-    // __module_private__ does not apply to local classes. However, we only
-    // diagnose this as an error when the declaration specifiers are
-    // freestanding. Here, we just ignore the __module_private__.
-    else if (!SearchDC->isFunctionOrMethod())
-      New->setModulePrivate();
-  }
-  
-  // If this is a specialization of a member class (of a class template),
-  // check the specialization.
-  if (isExplicitSpecialization && CheckMemberSpecialization(New, Previous))
-    Invalid = true;
-           
-  if (Invalid)
-    New->setInvalidDecl();
-
-  if (Attr)
-    ProcessDeclAttributeList(S, New, Attr);
-
   // If we're declaring or defining a tag in function prototype scope
   // in C, note that this type can only be used within the function.
-  if (Name && S->isFunctionPrototypeScope() && !getLangOpts().CPlusPlus)
-    Diag(Loc, diag::warn_decl_in_param_list) << Context.getTagDeclType(New);
+  //if (Name && S->isFunctionPrototypeScope() && !getLangOpts().CPlusPlus)
+    //Diag(Loc, diag::warn_decl_in_param_list) << Context.getTagDeclType(New);
 
   // Set the lexical context. If the tag has a C++ scope specifier, the
   // lexical context will be different from the semantic context.
   New->setLexicalDeclContext(CurContext);
 
-  // Mark this as a friend decl if applicable.
-  // In Microsoft mode, a friend declaration also acts as a forward
-  // declaration so we always pass true to setObjectOfFriendDecl to make
-  // the tag name visible.
-  if (TUK == TUK_Friend)
-    New->setObjectOfFriendDecl(/* PreviouslyDeclared = */ !Previous.empty() ||
-                               getLangOpts().MicrosoftExt);
-
   // Set the access specifier.
-  if (!Invalid && SearchDC->isRecord())
+  if (!Invalid && SearchDC->isRecord()) {
+    assert(0 && "SearchDC always isFileContext?");
     SetMemberAccessSpecifier(New, PrevDecl, AS);
+  }
 
   if (TUK == TUK_Definition)
     New->startDefinition();
-
-  // If this has an identifier, add it to the scope stack.
-  if (TUK == TUK_Friend) {
-    // We might be replacing an existing declaration in the lookup tables;
-    // if so, borrow its access specifier.
-    if (PrevDecl)
-      New->setAccess(PrevDecl->getAccess());
-
-    DeclContext *DC = New->getDeclContext()->getRedeclContext();
-    DC->makeDeclVisibleInContext(New);
-    if (Name) // can be null along some error paths
-      if (Scope *EnclosingScope = getScopeForDeclContext(S, DC))
-        PushOnScopeChains(New, EnclosingScope, /* AddToContext = */ false);
-  } else if (Name) {
+  
+  // Add tag to Context.
+  if (Name) {
     S = getNonFieldDeclScope(S);
     PushOnScopeChains(New, S, !IsForwardReference);
     if (IsForwardReference)
       SearchDC->makeDeclVisibleInContext(New);
 
   } else {
+    assert(Name == 0 && "ghost, must has Name");
     CurContext->addDecl(New);
   }
 
-  // If this is the C FILE type, notify the AST context.
-  if (IdentifierInfo *II = New->getIdentifier())
-    if (!New->isInvalidDecl() &&
-        New->getDeclContext()->getRedeclContext()->isTranslationUnit() &&
-        II->isStr("FILE"))
-      Context.setFILEDecl(New);
-
   // If we were in function prototype scope (and not in C++ mode), add this
   // tag to the list of decls to inject into the function definition scope.
-  if (S->isFunctionPrototypeScope() && !getLangOpts().CPlusPlus &&
-      InFunctionDeclarator && Name)
-    DeclsInPrototypeScope.push_back(New);
+  //if (S->isFunctionPrototypeScope() && !getLangOpts().CPlusPlus &&
+    //  InFunctionDeclarator && Name)
+    //DeclsInPrototypeScope.push_back(New);
 
-  if (PrevDecl)
+  if (PrevDecl) {
+    assert(0 && "TODO, previous declaration");
     mergeDeclAttributes(New, PrevDecl);
+  }
 
   // If there's a #pragma GCC visibility in scope, set the visibility of this
   // record.
   AddPushedVisibilityAttribute(New);
-
+  
+  // zet, attention this.
   OwnedDecl = true;
+
   return New;
 }
 

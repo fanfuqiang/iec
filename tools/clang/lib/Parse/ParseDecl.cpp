@@ -1898,14 +1898,27 @@ void Parser::ParseVariableDeclarations(tok::TokenKind POCKind,
 ///     { io_var_declarations | function_var_decls }
 ///     function_body
 ///   'end_function'
-///
+/// processing like this C++ code: 
+///   class derived_function_name {};
 Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
                                                    SourceLocation &DeclEnd) {
   assert(Tok.is(tok::kw_function) && "Not a FUNCTION!");
-  tok::TokenKind TK = tok::kw_function;
+  /**
+    the arguments of ParseDeclarationSpecifiers() :
+
+    Context = Declarator::FileContext
+    DSContext = getDeclSpecContextFromDeclaratorContext(Context)
+              = DSC_top_level
+    TemplateInfo = ParsedTemplateInfo()
+    AS = AS_none
+    EnteringContext = (DSContext == DSC_class || DSContext == DSC_top_level)
+  */
+  tok::TokenKind TK = tok::kw_class;
   SourceLocation FunctionLoc = ConsumeToken();  // eat the 'function'
-  if (Tok.getKind() != tok::identifier) {
+  if (Tok.isNot(tok::identifier)) {
     Diag(Tok, diag::err_expected_ident_after) << "FUNCTION";
+
+    SkipUntil(tok::kw_end_function, false);
     return DeclGroupPtrTy();
   }
   // TST_function or TST_class
@@ -1923,7 +1936,7 @@ Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
   // Create the tag portion of the class.
   DeclResult TagOrTempResult = true; // invalid
   // Declaration or definition of a class type.
-  TagOrTempResult = Actions.ActOnTag(getCurScope(), DeclSpec::TST_class,
+  TagOrTempResult = Actions.ActOnTag(getCurScope(), TagType,
                                      Sema::TUK_Definition, FunctionLoc,
                                      SS, Name, NameLoc, 0, AS_none,
                                      SourceLocation(), MultiTemplateParamsArg(),
