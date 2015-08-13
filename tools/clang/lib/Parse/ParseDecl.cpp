@@ -1968,8 +1968,10 @@ Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
     return;
   }
 
-  if (Result)
+  if (Result) {
+    assert(!PrevSpec && "previous specification?");
     Diag(FunctionLoc, DiagID) << PrevSpec;
+  }
   // At this point, we've successfully parsed a function in 'function declaration'
   // While we could just return here, we're going to look at what comes after it
   // to improve error recovery.  If an impossible token occurs next, we assume 

@@ -1034,9 +1034,11 @@ void Sema::PushOnScopeChains(NamedDecl *D, Scope *S, bool AddToContext) {
   // Move up the scope chain until we find the nearest enclosing
   // non-transparent context. The declaration will be introduced into this
   // scope.
+  Scope *OldScope = S;
   while (S->getEntity() &&
          ((DeclContext *)S->getEntity())->isTransparentContext())
     S = S->getParent();
+  assert(OldScope == S && "scope error happend");
 
   // Add scoped declarations into their context, so that they can be
   // found later. Declarations without a context won't be inserted
@@ -1061,6 +1063,7 @@ void Sema::PushOnScopeChains(NamedDecl *D, Scope *S, bool AddToContext) {
   IdentifierResolver::iterator I = IdResolver.begin(D->getDeclName()),
                                IEnd = IdResolver.end();
   for (; I != IEnd; ++I) {
+    assert(0 && "redeclaration happend");
     if (S->isDeclScope(*I) && D->declarationReplaces(*I)) {
       S->RemoveDecl(*I);
       IdResolver.RemoveDecl(*I);
@@ -9003,11 +9006,14 @@ CreateNewDecl:
   
   // Add tag to Context.
   if (Name) {
+    Scope *OldVal = S;
     S = getNonFieldDeclScope(S);
+    assert(OldVal == S && "Scope error happend");
     PushOnScopeChains(New, S, !IsForwardReference);
-    if (IsForwardReference)
+    if (IsForwardReference) {
+      assert(0 && "IsForwardReference had been set");
       SearchDC->makeDeclVisibleInContext(New);
-
+    }
   } else {
     assert(Name == 0 && "ghost, must has Name");
     CurContext->addDecl(New);
