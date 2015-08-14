@@ -1617,22 +1617,23 @@ void Parser::BuildDeclaratorFromVarInfos(Declarator *D, IdentifierInfo *I,
 /// input_declaration := var_init_decl | edge_declaration
 /// var_init_decl := identifier {',' identifier } ':' type ';'
 ///
-void Parser::ParseVariableDeclarations(tok::TokenKind POCKind, 
+void Parser::ParseVariableDeclarations(DeclSpec &DS, tok::TokenKind POCKind, 
                                        SourceLocation StartLoc, Decl *TagDecl) {
   // Variable declaration start location.
   SourceLocation VarsKeywordLoc = Tok.getLocation();
   SourceLocation EndVarKeywordLoc;
-  // Enter a scope for the class.
+  // Enter a scope for the imagical class.
   ParseScope ClassScope(this, Scope::ClassScope|Scope::DeclScope);
   // Note that we are parsing a new (potentially-nested) class definition.
   ParsingClassDefinition ParsingDef(*this, TagDecl, true, false);
-  // Set the value of CurContext that means we will enter the tag context. 
+
   if (TagDecl)
+    // Set CurContext, and enter the tag context. 
     Actions.ActOnTagStartDefinition(getCurScope(), TagDecl);
   // 
   if (TagDecl)
     Actions.ActOnStartCXXMemberDeclarations(getCurScope(), TagDecl,
-                                            SourceLocation(), VDStart);
+                                            SourceLocation(), VarsKeywordLoc);
 
   // Parse the common declaration-specifiers piece.
   ParsingDeclSpec DS(*this), Useless(*this);
@@ -1936,6 +1937,8 @@ Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
   // Create the tag portion of the class.
   DeclResult TagOrTempResult = true; // invalid
   // Declaration or definition of a class type.
+  // If everything is ok, we will get the NEW created CXXRecordDecl object.
+  // And before this function, do not define enter a new scope.
   TagOrTempResult = Actions.ActOnTag(getCurScope(), TagType,
                                      Sema::TUK_Definition, FunctionLoc,
                                      SS, Name, NameLoc, 0, AS_none,
@@ -1950,7 +1953,7 @@ Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
   // Parse the function return type.
   ParseHeadTypeSpecification(DS);
   // Parse the var declarations
-  ParseVariableDeclarations(TK, FunctionLoc ,TagOrTempResult.get());
+  ParseVariableDeclarations(DS, TK, FunctionLoc ,TagOrTempResult.get());
   // Parse the funciton body.
   ParseCXXMemberSpecification(FunctionLoc, DeclSpec::TST_class,
                               TagOrTempResult.get());

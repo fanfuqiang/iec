@@ -9042,16 +9042,17 @@ CreateNewDecl:
 
 // TODO: implementate iec type name define semantaics
 void Sema::ActOnTagStartDefinition(Scope *S, Decl *TagD) {
-  AdjustDeclIfTemplate(TagD);
+  //AdjustDeclIfTemplate(TagD);
   TagDecl *Tag = cast<TagDecl>(TagD);
   
   // Enter the tag context.
   PushDeclContext(S, Tag);
-
+  // zet, trival.
   ActOnDocumentableDecl(TagD);
 
   // If there's a #pragma GCC visibility in scope, set the visibility of this
   // record.
+  // zet, trival.
   AddPushedVisibilityAttribute(Tag);
 }
 
