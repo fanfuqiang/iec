@@ -9069,7 +9069,7 @@ Decl *Sema::ActOnObjCContainerStartDefinition(Decl *IDecl) {
 void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
                                            SourceLocation FinalLoc,
                                            SourceLocation LBraceLoc) {
-  AdjustDeclIfTemplate(TagD);
+  //AdjustDeclIfTemplate(TagD);
   CXXRecordDecl *Record = cast<CXXRecordDecl>(TagD);
 
   FieldCollector->StartClass();

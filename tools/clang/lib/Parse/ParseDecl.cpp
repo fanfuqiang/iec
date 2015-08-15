@@ -1617,8 +1617,15 @@ void Parser::BuildDeclaratorFromVarInfos(Declarator *D, IdentifierInfo *I,
 /// input_declaration := var_init_decl | edge_declaration
 /// var_init_decl := identifier {',' identifier } ':' type ';'
 ///
-void Parser::ParseVariableDeclarations(DeclSpec &DS, tok::TokenKind POCKind, 
+void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl, tok::TokenKind POCKind, 
                                        SourceLocation StartLoc, Decl *TagDecl) {
+  // { io_var_declarations | function_var_decls }, maybe vars decl is empty.
+  // so we can just return without doing anything.
+  if (Tok.isNot(tok::kw_var) || Tok.isNot(tok::kw_var_input)
+      || Tok.isNot(tok::kw_var_output) || Tok.isNot(tok::kw_var_in_out)
+      || Tok.isNot(tok::kw_var_external) || Tok.isNot(tok::kw_var_global)
+      || Tok.isNot(tok::kw_var_temp))
+    return;
   // Variable declaration start location.
   SourceLocation VarsKeywordLoc = Tok.getLocation();
   SourceLocation EndVarKeywordLoc;
@@ -1630,17 +1637,19 @@ void Parser::ParseVariableDeclarations(DeclSpec &DS, tok::TokenKind POCKind,
   if (TagDecl)
     // Set CurContext, and enter the tag context. 
     Actions.ActOnTagStartDefinition(getCurScope(), TagDecl);
-  // 
+
   if (TagDecl)
+    // Set FieldCollector and InjectedClassName.
+    // TODO, InjectedClassName should be clean up?
     Actions.ActOnStartCXXMemberDeclarations(getCurScope(), TagDecl,
                                             SourceLocation(), VarsKeywordLoc);
 
   // Parse the common declaration-specifiers piece.
-  ParsingDeclSpec DS(*this), Useless(*this);
+  ParsingDeclSpec DS(*this), UselessDS(*this);
   // Parse the var name.
   // We make a imaginary ctor contain the var_inputs.
   ParsingDeclarator VarDeclInfo(*this, DS, Declarator::MemberContext),
-                    ImagCtor(*this, Useless, Declarator::MemberContext);
+                    ImagCtor(*this, UselessDS, Declarator::MemberContext);
   tok::TokenKind VarKind = Tok.getKind();
   // 
   SmallVector<DeclaratorChunk::ParamInfo, 16> ParamInfo;
@@ -1925,9 +1934,9 @@ Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
   // TST_function or TST_class
   //DeclSpec::TST TagType = DeclSpec::TST_function;
   DeclSpec::TST TagType = DeclSpec::TST_class;
-  // Parse the return type.
+  // Save the return type.
   ParsingDeclSpec DS(*this);
-  // Parse the function name.
+  // Save the function name.
   IdentifierInfo *Name = Tok.getIdentifierInfo();
   SourceLocation NameLoc = ConsumeToken();
   // Parse the (optional) nested-name-specifier.
