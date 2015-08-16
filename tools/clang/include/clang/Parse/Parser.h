@@ -1610,13 +1610,39 @@ private:
   DeclGroupPtrTy ParseDeclaration(StmtVector &Stmts,
                                   unsigned Context, SourceLocation &DeclEnd,
                                   ParsedAttributesWithRange &attrs);
-  ///zet, ParseElementDeclaration
+  //===--------------------------------------------------------------------===//
+  /// st-lang parse function.
+  /// zet, ParseElementDeclaration
+  /// Simple local struct contain identifiers info temporarily.
+  class IdentInfoAndLoc {
+    IdentifierInfo *IdInfo;
+    SourceLocation Loc;
+
+  public:
+    IdentInfoAndLoc() : IdInfo(0), Loc(SourceLocation()) {}
+    IdentInfoAndLoc(IdentifierInfo *I, SourceLocation S) : IdInfo(I), Loc(S) {}
+    void clear() {
+      IdInfo = 0;
+      Loc = SourceLocation();
+    }
+    IdentifierInfo *first() { return IdInfo; }
+    SourceLocation second() { return Loc; }
+    // If invalid return true.
+    bool isInValid() {
+      if (IdInfo && Loc.isValid())
+        return false;
+      return true;
+    }
+  };
+
   void ParseIdentifier(Declarator &D);
   void ParseHeadTypeSpecification(DeclSpec &DS);
   void ParseSubrangeSpecification(DeclSpec &DS);
   void ParseSimpleSpecification(DeclSpec &DS);
   void ParseVariableDeclarations(DeclSpec &DS, tok::TokenKind POCKind, 
                                  SourceLocation StartLoc, Decl *TagDecl);
+  void ParseVarInputDeclaration(Decl *TagDecl);
+
   void BuildDeclaratorFromVarInfos(Declarator *D, IdentifierInfo *I,
                                    SourceLocation S);
   DeclGroupPtrTy ParseElementDeclaration();

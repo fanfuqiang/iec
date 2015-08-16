@@ -1598,6 +1598,12 @@ void Parser::BuildDeclaratorFromVarInfos(Declarator *D, IdentifierInfo *I,
   D->SetIdentifier(I, S);
 }
 
+/// ParseVarInputDeclaration - Parse var_input declarations
+void Parser::ParseVarInputDeclaration(Decl *TagDecl) {
+
+  return;
+}
+
 /// ParseVariableDeclarations - Parse the variable declarations.
 ///
 /// Handle the variable declarations like this:
@@ -1617,23 +1623,23 @@ void Parser::BuildDeclaratorFromVarInfos(Declarator *D, IdentifierInfo *I,
 /// input_declaration := var_init_decl | edge_declaration
 /// var_init_decl := identifier {',' identifier } ':' type ';'
 ///
-void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl, tok::TokenKind POCKind, 
+void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl, 
+                                       tok::TokenKind POCKind, 
                                        SourceLocation StartLoc, Decl *TagDecl) {
-  // { io_var_declarations | function_var_decls }, maybe vars decl is empty.
-  // so we can just return without doing anything.
+  // { io_var_declarations | function_var_decls }.
+  // Maybe vars decl is empty. so we can just return without doing anything.
   if (Tok.isNot(tok::kw_var) || Tok.isNot(tok::kw_var_input)
       || Tok.isNot(tok::kw_var_output) || Tok.isNot(tok::kw_var_in_out)
       || Tok.isNot(tok::kw_var_external) || Tok.isNot(tok::kw_var_global)
       || Tok.isNot(tok::kw_var_temp))
     return;
-  // Variable declaration start location.
+  // Can not call ConsumeToken() flush the current token, we only need the
+  // location of current token.
   SourceLocation VarsKeywordLoc = Tok.getLocation();
-  SourceLocation EndVarKeywordLoc;
   // Enter a scope for the imagical class.
   ParseScope ClassScope(this, Scope::ClassScope|Scope::DeclScope);
   // Note that we are parsing a new (potentially-nested) class definition.
   ParsingClassDefinition ParsingDef(*this, TagDecl, true, false);
-
   if (TagDecl)
     // Set CurContext, and enter the tag context. 
     Actions.ActOnTagStartDefinition(getCurScope(), TagDecl);
@@ -1643,7 +1649,55 @@ void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl, tok::TokenKind POC
     // TODO, InjectedClassName should be clean up?
     Actions.ActOnStartCXXMemberDeclarations(getCurScope(), TagDecl,
                                             SourceLocation(), VarsKeywordLoc);
+  // If error happens set this true.
+  bool isInvalid = false;
+  // Parse var declarations. the same var declaration keyword maybe appears
+  // many times. 
+  while(1) {
+    switch (Tok.getKind()) {
+    case tok::kw_var:
+      break;
+    case tok::kw_var_input:
+      ParseVarInputDeclaration(TagDecl);
+      break;
+    case tok::kw_var_in_out:
+      break;
+    case tok::kw_var_output:
+      break;
+    case tok::kw_var_external:
+      if (POCKind == tok::kw_function) {
+        isInvalid = true;
+        break;
+      }
 
+      break;
+    case tok::kw_var_global:
+      if (POCKind == tok::kw_function) {
+        isInvalid = true;
+        break;
+      }
+
+      break;
+    case tok::kw_var_temp:
+      if (POCKind == tok::kw_function) {
+        isInvalid = true;
+        break;
+      }
+
+      break;
+    default:
+    // Fall through, parse the function body.
+    //Diag(Tok, diag::err_expected_var_declaration_keyword);
+    }
+  }
+
+
+
+  // Variable declaration start location. we do not know current token whether
+  // or not is a var declaration keyword, so can not call ConsumeToken() now.
+  SourceLocation EndVarKeywordLoc;
+
+  AccessSpecifier CurAS;
   // Parse the common declaration-specifiers piece.
   ParsingDeclSpec DS(*this), UselessDS(*this);
   // Parse the var name.
@@ -1662,36 +1716,10 @@ void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl, tok::TokenKind POC
                                       EnteringContext, 
                                       ImagCtor.getCXXScopeSpec());
 
-  // Simple local struct contain identifiers info temporarily.
-  class IdentInfoAndLoc {
-    // Local class, public data member is reasonable, i think.
-    IdentifierInfo *IdInfo;
-    SourceLocation Loc;
-
-  public:
-    IdentInfoAndLoc() : IdInfo(0), Loc(SourceLocation()) {}
-    IdentInfoAndLoc(IdentifierInfo *I, SourceLocation S) : IdInfo(I), Loc(S) {}
-    void clear() {
-      IdInfo = 0;
-      Loc = SourceLocation();
-    }
-    IdentifierInfo *first() { return IdInfo; }
-    SourceLocation second() { return Loc; }
-    // If invalid return true.
-    bool isInValid() {
-      if (IdInfo && Loc.isValid())
-        return false;
-      return true;
-    }
-  };
-
-  // If error happens set this true.
-  bool isInvalid = false;
   //unsigned DiagID;
-
   switch (VarKind) {
   case tok::kw_var: {
-    
+    CurAS = AS_private;
     break;                  
   }
 
@@ -1856,6 +1884,8 @@ void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl, tok::TokenKind POC
   }
   case tok::kw_var_in_out:
   case tok::kw_var_output:
+    CurAS = AS_public;
+    break;
   case tok::kw_var_external:
     if (POCKind == tok::kw_function) {
       isInvalid = true;
