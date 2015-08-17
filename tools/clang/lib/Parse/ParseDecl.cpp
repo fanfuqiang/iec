@@ -1591,15 +1591,63 @@ Parser::DeclGroupPtrTy Parser::ParseTypeDeclaration(unsigned Context,
 
 }
 
-/// BuildDeclaratorFromVarInfos - Build one declarator from IdentifierInfo and the
-/// location infomation of the identifer.
+/// BuildDeclaratorFromVarInfos - Build one declarator from IdentifierInfo and
+/// the location infomation of the identifer.
 void Parser::BuildDeclaratorFromVarInfos(Declarator *D, IdentifierInfo *I,
                                  SourceLocation S) {
   D->SetIdentifier(I, S);
 }
 
-/// ParseVarInputDeclaration - Parse var_input declarations
+/// ParseVarInputDeclaration - Parse var declarations.
+/// var declaration will be handled as private data member of class.
+/// Same as -> class poc_name { var names };
+/// 
+void Parser::ParseVarDeclaration(Decl *TagDecl) {
+  assert(0 && "need coding");
+  return;
+}
+
+/// ParseFakeScopeSpecifier - Creat nested name specifier for the fake 
+/// specifier.
+/// The fake specifier is -> poc_name::
+///
+void Parser::ParseFakeScopeSpecifier(Decl *TagDecl, CXXScopeSpec &SS) {
+  // IdentifierInfo of the faked scope specifier -> poc_name.
+  IdentifierInfo &II = *cast<CXXRecordDecl>(TagDecl)->getIdentifier();
+
+
+}
+
+/// ParseVarInputDeclaration - Parse var_input declarations.
+/// var_input declarations will be handled as const type parameter of member
+/// function.
+/// 
+/// input_declarations :=
+///   'VAR_INPUT' ['retain' | 'no_retain']
+///   input_declaration ';'
+///   { input_declaration ';'}
+///   'END_VAR'
+/// input_declaration := var_init_decl | edge_declaration
+/// var_init_decl := identifier {',' identifier } ':' type ';'
+///
+/// Same as -> poc_name::poc_name(var_input const names) {}
+/// 
 void Parser::ParseVarInputDeclaration(Decl *TagDecl) {
+  assert(Tok.is(tok::kw_var_input) && "Not var_input");
+  unsigned Context = Declarator::FileContext;
+  ParsedAttributesWithRange attrs(AttrFactory); // useless but must has
+  StmtVector Stmts;
+  SourceLocation DeclEnd;
+  ParsingDeclRAIIObject *TemplateDiags = 0;
+  // Parse the common declaration-specifiers piece.
+  ParsingDeclSpec DS(*this, TemplateDiags);
+  // Like as meet 'poc_name::'.
+  CXXScopeSpec SS;
+
+  SourceLocation VarInputLoc = Tok.getLocation();
+  ConsumeToken(); // eat var_input
+  
+  ParseFakeScopeSpecifier(TagDecl, SS);
 
   return;
 }
@@ -1614,14 +1662,6 @@ void Parser::ParseVarInputDeclaration(Decl *TagDecl) {
 ///   var_external names  -   globals declaration
 ///   var_global names    -   globals definition
 ///   var_temp names      -   locals of member function
-///
-/// input_declarations :=
-///   'VAR_INPUT' ['retain' | 'no_retain']
-///   input_declaration ';'
-///   { input_declaration ';'}
-///   'END_VAR'
-/// input_declaration := var_init_decl | edge_declaration
-/// var_init_decl := identifier {',' identifier } ':' type ';'
 ///
 void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl, 
                                        tok::TokenKind POCKind, 
@@ -1656,6 +1696,7 @@ void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl,
   while(1) {
     switch (Tok.getKind()) {
     case tok::kw_var:
+      ParseVarDeclaration(TagDecl);
       break;
     case tok::kw_var_input:
       ParseVarInputDeclaration(TagDecl);
