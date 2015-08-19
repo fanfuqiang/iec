@@ -2084,14 +2084,12 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, bool EnteringContext,
     // Consume the identifier.
     IdentifierInfo *Id = Tok.getIdentifierInfo();
     SourceLocation IdLoc = ConsumeToken();
-
-    if (!getLangOpts().CPlusPlus) {
-      // If we're not in C++, only identifiers matter. Record the
-      // identifier and return.
-      Result.setIdentifier(Id, IdLoc);
-      return false;
-    }
-
+    //if (!getLangOpts().CPlusPlus) {
+    //  // If we're not in C++, only identifiers matter. Record the
+    //  // identifier and return.
+    //  Result.setIdentifier(Id, IdLoc);
+    //  return false;
+    //}
     if (AllowConstructorName && 
         Actions.isCurrentClassName(*Id, getCurScope(), &SS)) {
       // We have parsed a constructor name.
@@ -2107,11 +2105,10 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, bool EnteringContext,
     }
 
     // If the next token is a '<', we may have a template.
-    if (TemplateSpecified || Tok.is(tok::less))
+    /*if (TemplateSpecified || Tok.is(tok::less))
       return ParseUnqualifiedIdTemplateId(SS, TemplateKWLoc, Id, IdLoc,
                                           EnteringContext, ObjectType,
-                                          Result, TemplateSpecified);
-    
+                                          Result, TemplateSpecified);*/    
     return false;
   }
   

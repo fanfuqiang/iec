@@ -1640,17 +1640,22 @@ private:
   void ParseSubrangeSpecification(DeclSpec &DS);
   void ParseSimpleSpecification(DeclSpec &DS);
   void ParseVariableDeclarations(DeclSpec &DS, tok::TokenKind POCKind, 
-                                 SourceLocation StartLoc, Decl *TagDecl);
-  void ParseFakeCtorDeclaration(SourceLocation POCStartLoc, Declarator &Func);
+                                 SourceLocation StartLoc, 
+                                 SourceLocation NameLoc, Decl *TagDecl);
+  void ParseFakeCtorDeclaration(Decl *TagDecl, SourceLocation POCStartLoc,
+                                SourceLocation IdLoc, Declarator &D);
   void ParseFakeScopeSpecifier(Decl *TagDecl, CXXScopeSpec &SS);
   void ParseVarDeclaration(Decl *TagDecl);
-  void ParseVarInputDeclaration(SourceLocation POCStartLoc, Decl *TagDecl);
+  void ParseVarInputDeclaration(SourceLocation POCStartLoc,
+                                SourceLocation NameLoc, Decl *TagDecl);
   void BuildDeclaratorFromVarInfos(Declarator *D, IdentifierInfo *I,
                                    SourceLocation S);
   DeclGroupPtrTy ParseElementDeclaration();
-  DeclGroupPtrTy ParseTypeDeclaration(unsigned Context, SourceLocation &DeclEnd);
+  DeclGroupPtrTy ParseTypeDeclaration(unsigned Context,
+                                      SourceLocation &DeclEnd);
   Decl *ParseTypeMemberDeclaration(SourceLocation &SemiLoc);
-  DeclGroupPtrTy ParseFunctionDeclaration(unsigned Context, SourceLocation &DeclEnd);
+  DeclGroupPtrTy ParseFunctionDeclaration(unsigned Context,
+                                          SourceLocation &DeclEnd);
   DeclGroupPtrTy ParseSimpleDeclaration(StmtVector &Stmts,
                                         unsigned Context,
                                         SourceLocation &DeclEnd,

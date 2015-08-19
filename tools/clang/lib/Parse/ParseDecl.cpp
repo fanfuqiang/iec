@@ -1622,11 +1622,27 @@ void Parser::ParseFakeScopeSpecifier(Decl *TagDecl, CXXScopeSpec &SS) {
 /// DO NOT consume any token.
 /// The fake ctor is -> poc_name()
 ///
-void Parser::ParseFakeCtorDeclaration(SourceLocation POCStartLoc,
-                                      Declarator &D){
+void Parser::ParseFakeCtorDeclaration(Decl *TagDecl, SourceLocation POCStartLoc,
+                                      SourceLocation IdLoc, Declarator &D) {
   //
   //
+  IdentifierInfo *Id = cast<CXXRecordDecl>(TagDecl)->getIdentifier();
   SourceLocation TemplateKWLoc;
+  CXXScopeSpec &SS = D.getCXXScopeSpec();
+  assert(Actions.isCurrentClassName(*Id, getCurScope(), &SS) &&
+         "fake ctor scope error");
+  // We have parsed a constructor name.
+  ParsedType Ty = Actions.getTypeName(*Id, IdLoc, getCurScope(),
+                                      &SS, false, false,
+                                      ParsedType(),
+                                      /*IsCtorOrDtorName=*/true,
+                                      /*NonTrivialTypeSourceInfo=*/true);
+  UnqualifiedId &Result = D.getName();
+  Result.setConstructorName(Ty, IdLoc, IdLoc);
+
+
+
+
   if (ParseUnqualifiedId(D.getCXXScopeSpec(), /*EnteringContext=*/true,
                          /*AllowDestructorName=*/true,
                          /*AllowConstructorName =*/true,
@@ -1656,7 +1672,7 @@ void Parser::ParseFakeCtorDeclaration(SourceLocation POCStartLoc,
 /// Same as -> poc_name::poc_name(var_input const names) {}
 /// 
 void Parser::ParseVarInputDeclaration(SourceLocation POCStartLoc,
-                                      Decl *TagDecl) {
+                                      SourceLocation NameLoc, Decl *TagDecl) {
   assert(Tok.is(tok::kw_var_input) && "Not var_input");
   unsigned Context = Declarator::FileContext;
   ParsedAttributesWithRange attrs(AttrFactory); // useless but must has
@@ -1674,7 +1690,7 @@ void Parser::ParseVarInputDeclaration(SourceLocation POCStartLoc,
   //ParseFakeScopeSpecifier(TagDecl, SS);
   // poc_name(input_declarations) {}
   // Do not need call ParseDeclarationSpecifiers(), have no any specifier. 
-  ParseFakeCtorDeclaration(POCStartLoc, DeclaratorInfo);
+  ParseFakeCtorDeclaration(TagDecl, POCStartLoc, DeclaratorInfo);
  
 
 
@@ -1694,7 +1710,8 @@ void Parser::ParseVarInputDeclaration(SourceLocation POCStartLoc,
 ///
 void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl, 
                                        tok::TokenKind POCKind, 
-                                       SourceLocation StartLoc, Decl *TagDecl) {
+                                       SourceLocation StartLoc, 
+                                       SourceLocation NameLoc, Decl *TagDecl) {
   // { io_var_declarations | function_var_decls }.
   // Maybe vars decl is empty. so we can just return without doing anything.
   if (Tok.isNot(tok::kw_var) || Tok.isNot(tok::kw_var_input)
@@ -1728,7 +1745,7 @@ void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl,
       ParseVarDeclaration(TagDecl);
       break;
     case tok::kw_var_input:
-      ParseVarInputDeclaration(StartLoc, TagDecl);
+      ParseVarInputDeclaration(StartLoc, NameLoc, TagDecl);
       break;
     case tok::kw_var_in_out:
       break;
@@ -2062,7 +2079,7 @@ Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
   // Parse the function return type.
   ParseHeadTypeSpecification(DS);
   // Parse the var declarations
-  ParseVariableDeclarations(DS, TK, FunctionLoc ,TagOrTempResult.get());
+  ParseVariableDeclarations(DS, TK, FunctionLoc, NameLoc, TagOrTempResult.get());
   // Parse the funciton body.
   ParseCXXMemberSpecification(FunctionLoc, DeclSpec::TST_class,
                               TagOrTempResult.get());
