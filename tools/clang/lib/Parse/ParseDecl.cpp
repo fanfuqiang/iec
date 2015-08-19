@@ -1608,12 +1608,35 @@ void Parser::ParseVarDeclaration(Decl *TagDecl) {
 }
 
 /// ParseFakeScopeSpecifier - Creat nested name specifier for the fake 
-/// specifier.
+/// specifier. DO NOT consume any token.
 /// The fake specifier is -> poc_name::
 ///
 void Parser::ParseFakeScopeSpecifier(Decl *TagDecl, CXXScopeSpec &SS) {
   // IdentifierInfo of the faked scope specifier -> poc_name.
   IdentifierInfo &II = *cast<CXXRecordDecl>(TagDecl)->getIdentifier();
+
+
+}
+
+/// ParseFakeCtorDeclaration - Make info for the fake constructor.
+/// DO NOT consume any token.
+/// The fake ctor is -> poc_name()
+///
+void Parser::ParseFakeCtorDeclaration(SourceLocation POCStartLoc,
+                                      Declarator &D){
+  //
+  //
+  SourceLocation TemplateKWLoc;
+  if (ParseUnqualifiedId(D.getCXXScopeSpec(), /*EnteringContext=*/true,
+                         /*AllowDestructorName=*/true,
+                         /*AllowConstructorName =*/true,
+                         ParsedType(), TemplateKWLoc, D.getName()) ||
+      // Once we're past the identifier, if the scope was bad, mark the
+      // whole declarator bad.
+      D.getCXXScopeSpec().isInvalid()) {
+    D.SetIdentifier(0, Tok.getLocation());
+    D.setInvalidType(true);
+  }
 
 
 }
@@ -1632,7 +1655,8 @@ void Parser::ParseFakeScopeSpecifier(Decl *TagDecl, CXXScopeSpec &SS) {
 ///
 /// Same as -> poc_name::poc_name(var_input const names) {}
 /// 
-void Parser::ParseVarInputDeclaration(Decl *TagDecl) {
+void Parser::ParseVarInputDeclaration(SourceLocation POCStartLoc,
+                                      Decl *TagDecl) {
   assert(Tok.is(tok::kw_var_input) && "Not var_input");
   unsigned Context = Declarator::FileContext;
   ParsedAttributesWithRange attrs(AttrFactory); // useless but must has
@@ -1643,11 +1667,16 @@ void Parser::ParseVarInputDeclaration(Decl *TagDecl) {
   ParsingDeclSpec DS(*this, TemplateDiags);
   // Like as meet 'poc_name::'.
   CXXScopeSpec SS;
-
   SourceLocation VarInputLoc = Tok.getLocation();
   ConsumeToken(); // eat var_input
-  
-  ParseFakeScopeSpecifier(TagDecl, SS);
+  // 
+  ParsingDeclarator DeclaratorInfo(*this, DS, Declarator::MemberContext);
+  //ParseFakeScopeSpecifier(TagDecl, SS);
+  // poc_name(input_declarations) {}
+  // Do not need call ParseDeclarationSpecifiers(), have no any specifier. 
+  ParseFakeCtorDeclaration(POCStartLoc, DeclaratorInfo);
+ 
+
 
   return;
 }
@@ -1699,7 +1728,7 @@ void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl,
       ParseVarDeclaration(TagDecl);
       break;
     case tok::kw_var_input:
-      ParseVarInputDeclaration(TagDecl);
+      ParseVarInputDeclaration(StartLoc, TagDecl);
       break;
     case tok::kw_var_in_out:
       break;

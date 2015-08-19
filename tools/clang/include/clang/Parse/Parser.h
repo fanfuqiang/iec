@@ -1641,9 +1641,10 @@ private:
   void ParseSimpleSpecification(DeclSpec &DS);
   void ParseVariableDeclarations(DeclSpec &DS, tok::TokenKind POCKind, 
                                  SourceLocation StartLoc, Decl *TagDecl);
+  void ParseFakeCtorDeclaration(SourceLocation POCStartLoc, Declarator &Func);
   void ParseFakeScopeSpecifier(Decl *TagDecl, CXXScopeSpec &SS);
   void ParseVarDeclaration(Decl *TagDecl);
-  void ParseVarInputDeclaration(Decl *TagDecl);
+  void ParseVarInputDeclaration(SourceLocation POCStartLoc, Decl *TagDecl);
   void BuildDeclaratorFromVarInfos(Declarator *D, IdentifierInfo *I,
                                    SourceLocation S);
   DeclGroupPtrTy ParseElementDeclaration();

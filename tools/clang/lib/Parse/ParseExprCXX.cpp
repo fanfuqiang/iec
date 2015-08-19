@@ -2071,6 +2071,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, bool EnteringContext,
   bool TemplateSpecified = false;
   if (getLangOpts().CPlusPlus && Tok.is(tok::kw_template) &&
       (ObjectType || SS.isSet())) {
+    assert(0 && "zet, template");
     TemplateSpecified = true;
     TemplateKWLoc = ConsumeToken();
   }
@@ -2079,6 +2080,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, bool EnteringContext,
   //   identifier
   //   template-id (when it hasn't already been annotated)
   if (Tok.is(tok::identifier)) {
+    // zet, ctor.
     // Consume the identifier.
     IdentifierInfo *Id = Tok.getIdentifierInfo();
     SourceLocation IdLoc = ConsumeToken();
@@ -2116,6 +2118,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, bool EnteringContext,
   // unqualified-id:
   //   template-id (already parsed and annotated)
   if (Tok.is(tok::annot_template_id)) {
+    assert(0 && "zet, template");
     TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
 
     // If the template-name names the current class, then this is a constructor 
@@ -2161,6 +2164,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, bool EnteringContext,
   //   operator-function-id
   //   conversion-function-id
   if (Tok.is(tok::kw_operator)) {
+    assert(0 && "zet, operator function");
     if (ParseUnqualifiedIdOperator(SS, EnteringContext, ObjectType, Result))
       return true;
     
@@ -2188,6 +2192,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, bool EnteringContext,
     //    unary complement rather than treating ~X as referring to a destructor.
     
     // Parse the '~'.
+    assert(0 && "zet, dtor");
     SourceLocation TildeLoc = ConsumeToken();
 
     if (SS.isEmpty() && Tok.is(tok::kw_decltype)) {
