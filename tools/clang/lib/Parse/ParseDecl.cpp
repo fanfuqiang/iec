@@ -1621,13 +1621,12 @@ void Parser::ParseFakeScopeSpecifier(Decl *TagDecl, CXXScopeSpec &SS) {
 /// ParseFakeCtorDeclaration - Make info for the fake constructor.
 /// DO NOT consume any token.
 /// The fake ctor is -> poc_name()
+/// \returns true if parsing fails, false otherwise.
 ///
-void Parser::ParseFakeCtorDeclaration(Decl *TagDecl, SourceLocation POCStartLoc,
-                                      SourceLocation IdLoc, Declarator &D) {
-  //
-  //
+bool Parser::ParseFakeCtorDeclaration(Decl *TagDecl, SourceLocation IdLoc,
+                                      Declarator &D) {
+  // The parameter IdLoc keeps the info about poc_name.
   IdentifierInfo *Id = cast<CXXRecordDecl>(TagDecl)->getIdentifier();
-  SourceLocation TemplateKWLoc;
   CXXScopeSpec &SS = D.getCXXScopeSpec();
   assert(Actions.isCurrentClassName(*Id, getCurScope(), &SS) &&
          "fake ctor scope error");
@@ -1639,22 +1638,20 @@ void Parser::ParseFakeCtorDeclaration(Decl *TagDecl, SourceLocation POCStartLoc,
                                       /*NonTrivialTypeSourceInfo=*/true);
   UnqualifiedId &Result = D.getName();
   Result.setConstructorName(Ty, IdLoc, IdLoc);
-
-
-
-
-  if (ParseUnqualifiedId(D.getCXXScopeSpec(), /*EnteringContext=*/true,
-                         /*AllowDestructorName=*/true,
-                         /*AllowConstructorName =*/true,
-                         ParsedType(), TemplateKWLoc, D.getName()) ||
-      // Once we're past the identifier, if the scope was bad, mark the
-      // whole declarator bad.
-      D.getCXXScopeSpec().isInvalid()) {
+  
+  if (SS.isInvalid()) {
+    assert(0 && "CXXScopeSpec error that should be empty");
     D.SetIdentifier(0, Tok.getLocation());
     D.setInvalidType(true);
+    return true;
+  } else {
+    // Parsed the unqualified-id; update range information and move along.
+    if (D.getSourceRange().getBegin().isInvalid())
+      D.SetRangeBegin(D.getName().getSourceRange().getBegin());
+    D.SetRangeEnd(D.getName().getSourceRange().getEnd());
   }
 
-
+  return false;
 }
 
 /// ParseVarInputDeclaration - Parse var_input declarations.
@@ -1670,8 +1667,9 @@ void Parser::ParseFakeCtorDeclaration(Decl *TagDecl, SourceLocation POCStartLoc,
 /// var_init_decl := identifier {',' identifier } ':' type ';'
 ///
 /// Same as -> poc_name::poc_name(var_input const names) {}
-/// 
-void Parser::ParseVarInputDeclaration(SourceLocation POCStartLoc,
+/// \returns true if parsing fails, false otherwise.
+///
+bool Parser::ParseVarInputDeclaration(SourceLocation POCStartLoc,
                                       SourceLocation NameLoc, Decl *TagDecl) {
   assert(Tok.is(tok::kw_var_input) && "Not var_input");
   unsigned Context = Declarator::FileContext;
@@ -1690,9 +1688,18 @@ void Parser::ParseVarInputDeclaration(SourceLocation POCStartLoc,
   //ParseFakeScopeSpecifier(TagDecl, SS);
   // poc_name(input_declarations) {}
   // Do not need call ParseDeclarationSpecifiers(), have no any specifier. 
-  ParseFakeCtorDeclaration(TagDecl, POCStartLoc, DeclaratorInfo);
- 
-
+  if (ParseFakeCtorDeclaration(TagDecl, NameLoc, DeclaratorInfo)) {
+    TagDecl->setInvalidDecl();
+    return true;
+  }
+  // Enter function-declaration scope, limiting any declarators to the
+  // function prototype scope, including parameter declarators.
+  // zet, Need keep this?
+  ParseScope PrototypeScope(this,
+                            Scope::FunctionPrototypeScope|Scope::DeclScope);
+  BalancedDelimiterTracker T(*this, tok::l_paren); // make sure never use this
+  ParseFunctionDeclarator(DeclaratorInfo, attrs, T, false);
+  PrototypeScope.Exit();
 
   return;
 }

@@ -1642,11 +1642,11 @@ private:
   void ParseVariableDeclarations(DeclSpec &DS, tok::TokenKind POCKind, 
                                  SourceLocation StartLoc, 
                                  SourceLocation NameLoc, Decl *TagDecl);
-  void ParseFakeCtorDeclaration(Decl *TagDecl, SourceLocation POCStartLoc,
-                                SourceLocation IdLoc, Declarator &D);
+  bool ParseFakeCtorDeclaration(Decl *TagDecl, SourceLocation IdLoc,
+                                Declarator &D);
   void ParseFakeScopeSpecifier(Decl *TagDecl, CXXScopeSpec &SS);
   void ParseVarDeclaration(Decl *TagDecl);
-  void ParseVarInputDeclaration(SourceLocation POCStartLoc,
+  bool ParseVarInputDeclaration(SourceLocation POCStartLoc,
                                 SourceLocation NameLoc, Decl *TagDecl);
   void BuildDeclaratorFromVarInfos(Declarator *D, IdentifierInfo *I,
                                    SourceLocation S);
