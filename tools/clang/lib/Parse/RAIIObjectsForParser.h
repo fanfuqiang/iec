@@ -367,6 +367,10 @@ namespace clang {
         case tok::l_brace: return P.BraceCount;
         case tok::l_square: return P.BracketCount;
         case tok::l_paren: return P.ParenCount;
+        case tok::kw_var:
+        case tok::kw_var_input:
+        case tok::kw_var_in_out:
+        case tok::kw_var_output: return P.VarsKeywordCount;
         default: llvm_unreachable("Wrong token kind");
       }
     }
@@ -383,6 +387,13 @@ namespace clang {
     {
       switch (Kind) {
         default: llvm_unreachable("Unexpected balanced token");
+        case tok::kw_var:
+        case tok::kw_var_input:
+        case tok::kw_var_in_out:
+        case tok::kw_var_output:
+          Close = tok::kw_end_var;
+          Consumer = &Parser::ConsumeVarsKeyword;
+          break;
         case tok::l_brace:
           Close = tok::r_brace; 
           Consumer = &Parser::ConsumeBrace;

@@ -102,7 +102,7 @@ class Parser : public CodeCompletionHandler {
   // a statement).
   SourceLocation PrevTokLocation;
 
-  unsigned short ParenCount, BracketCount, BraceCount;
+  unsigned short ParenCount, BracketCount, BraceCount, VarsKeywordCount;
   
   /// Actions - These are the callbacks we invoke as we parse various constructs
   /// in the file.
@@ -320,6 +320,14 @@ private:
   bool isTokenBrace() const {
     return Tok.getKind() == tok::l_brace || Tok.getKind() == tok::r_brace;
   }
+  /// isTokenBrace - Return true if the cur token is 'var' or 'var_input' or
+  /// 'var_in_out' or 'var_output' or 'end_var'.
+  bool isTokenVarsKeyword() const {
+    return Tok.getKind() == tok::kw_var || Tok.getKind() == tok::kw_var_input ||
+           Tok.getKind() == tok::kw_var_in_out ||
+           Tok.getKind() == tok::kw_var_output ||
+           Tok.getKind() == tok::kw_end_var;
+  }
 
   /// isTokenStringLiteral - True if this token is a string-literal.
   ///
@@ -386,6 +394,23 @@ private:
       ++BraceCount;
     else if (BraceCount)
       --BraceCount;     // Don't let unbalanced }'s drive the count negative.
+
+    PrevTokLocation = Tok.getLocation();
+    PP.Lex(Tok);
+    return PrevTokLocation;
+  }
+
+  /// ConsumeVarsKeyword - This consume method keeps the vars declaration 
+  /// keyword count up-to-date.
+  ///
+  SourceLocation ConsumeVarsKeyword() {
+    assert(isTokenVarsKeyword() && "wrong consume method");
+    if (Tok.getKind() == tok::kw_var || Tok.getKind() == tok::kw_var_input ||
+        Tok.getKind() == tok::kw_var_in_out ||
+        Tok.getKind() == tok::kw_var_output)
+      ++VarsKeywordCount;
+    else if (VarsKeywordCount)
+      --VarsKeywordCount;     // Don't let unbalanced }'s drive the count negative.
 
     PrevTokLocation = Tok.getLocation();
     PP.Lex(Tok);

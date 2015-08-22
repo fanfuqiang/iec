@@ -58,7 +58,7 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
   Tok.setKind(tok::eof);
   Actions.CurScope = 0;
   NumCachedScopes = 0;
-  ParenCount = BracketCount = BraceCount = 0;
+  ParenCount = BracketCount = BraceCount = VarsKeywordCount = 0;
   CurParsedObjCImpl = 0;
 
   // Add #pragma handlers. These are removed and destroyed in the

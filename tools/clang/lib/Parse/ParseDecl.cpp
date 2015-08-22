@@ -1697,7 +1697,7 @@ bool Parser::ParseVarInputDeclaration(SourceLocation POCStartLoc,
   // zet, Need keep this?
   ParseScope PrototypeScope(this,
                             Scope::FunctionPrototypeScope|Scope::DeclScope);
-  BalancedDelimiterTracker T(*this, tok::l_paren); // make sure never use this
+  BalancedDelimiterTracker T(*this, tok::kw_var_input); // make sure never use this
   ParseFunctionDeclarator(DeclaratorInfo, attrs, T, false);
   PrototypeScope.Exit();
 
