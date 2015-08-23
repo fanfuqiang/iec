@@ -1637,8 +1637,9 @@ bool Parser::ParseFakeCtorDeclaration(Decl *TagDecl, SourceLocation IdLoc,
                                       /*IsCtorOrDtorName=*/true,
                                       /*NonTrivialTypeSourceInfo=*/true);
   UnqualifiedId &Result = D.getName();
+  // Set the class type that the ctor defined in.
   Result.setConstructorName(Ty, IdLoc, IdLoc);
-  
+
   if (SS.isInvalid()) {
     assert(0 && "CXXScopeSpec error that should be empty");
     D.SetIdentifier(0, Tok.getLocation());
@@ -1698,7 +1699,7 @@ bool Parser::ParseVarInputDeclaration(SourceLocation POCStartLoc,
   ParseScope PrototypeScope(this,
                             Scope::FunctionPrototypeScope|Scope::DeclScope);
   BalancedDelimiterTracker T(*this, tok::kw_var_input); // make sure never use this
-  ParseFunctionDeclarator(DeclaratorInfo, attrs, T, false);
+  ParseFunctionDeclarator(DeclaratorInfo, attrs, T, false, false);
   PrototypeScope.Exit();
 
   return;
@@ -5628,7 +5629,9 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
   LParenLoc = Tracker.getOpenLocation();
   StartLoc = LParenLoc;
 
-  if (isFunctionDeclaratorIdentifierList()) {
+  // For st-lang shold be here.
+  //if (isFunctionDeclaratorIdentifierList()) {
+  if (1) {
     if (RequiresArg)
       Diag(Tok, diag::err_argument_required_after_attribute);
 
@@ -5778,6 +5781,9 @@ bool Parser::isFunctionDeclaratorIdentifierList() {
 ///       identifier-list: [C99 6.7.5]
 ///         identifier
 ///         identifier-list ',' identifier
+/// st-lang
+///       input_declarations
+///         variable_name {',' variable_name} : type
 ///
 void Parser::ParseFunctionDeclaratorIdentifierList(
        Declarator &D,
@@ -5796,7 +5802,7 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
     // If this isn't an identifier, report the error and skip until ')'.
     if (Tok.isNot(tok::identifier)) {
       Diag(Tok, diag::err_expected_ident);
-      SkipUntil(tok::r_paren, /*StopAtSemi=*/true, /*DontConsume=*/true);
+      SkipUntil(tok::kw_end_var, /*StopAtSemi=*/true, /*DontConsume=*/true);
       // Forget we parsed anything.
       ParamInfo.clear();
       return;
