@@ -1478,7 +1478,7 @@ Decl *Parser::ParseTypeMemberDeclaration(SourceLocation &SemiLoc) {
   ParsingDeclarator D(*this, DS, static_cast<Declarator::TheContext>(0));
   // Parse the identifier and eat the identifier
   ParseIdentifier(D);
-  // eat the ':'
+  // Eat the ':'.
   ExpectAndConsume(tok::colon, diag::err_expected_colon_after,
                      "data type name", tok::kw_end_type);
   ParseHeadTypeSpecification(DS);
@@ -1655,6 +1655,114 @@ bool Parser::ParseFakeCtorDeclaration(Decl *TagDecl, SourceLocation IdLoc,
   return false;
 }
 
+/// ParseFakeParemeterDeclarations - parse var_input declarations.
+/// [st-lang] var_input declaration:
+///             'var_input'
+///               identifier {',' identifier} : type ';'
+///               {identifier {',' identifier} : type ';'}
+///             'end_var'
+/// var_input names - const type parameter of member function.
+/// The type of these faked paremeter are const acquiescently.
+/// Make sure not eat 'end_var'.
+///
+void Parser::ParseFakeParameterDeclarations(
+         Declarator &D,
+         SmallVector<DeclaratorChunk::ParamInfo, 16> &ParamInfo) {
+  // Maintain an efficient lookup of params we have seen so far.
+  llvm::SmallSet<const IdentifierInfo*, 16> ParamsSoFar;
+  bool isInvaild = false;
+  // var_input declaration.
+  while (1) {
+    // identifier {',' identifier} : type ';'.
+    // Contain every group identifier that have same type.
+    SmallVector<DeclaratorChunk::ParamInfo, 16> GroupId;
+    assert(GroupId.size() == 0 && "local containner location error!");
+    // If there was no identifier specified for the declarator, either we are in
+    // an abstract-declarator, or we are in a parameter declarator which was found
+    // to be abstract.  In abstract-declarators, identifier lists are not valid:
+    // diagnose this.
+    if (!D.getIdentifier())
+      // TODO, zet, change this for st-lang.
+      Diag(Tok, diag::ext_ident_list_in_param);
+
+    while (1) {
+      // If this isn't an identifier, report the error and skip until ')'.
+      if (Tok.isNot(tok::identifier)) {
+        Diag(Tok, diag::err_expected_ident);
+        SkipUntil(tok::kw_end_var, /*StopAtSemi=*/true, /*DontConsume=*/true);
+        // Forget we parsed anything.
+        GroupId.clear();
+        return;
+      }
+
+      IdentifierInfo *ParmII = Tok.getIdentifierInfo();
+      // Reject 'typedef int y; int test(x, y)', but continue parsing.
+      if (Actions.getTypeName(*ParmII, Tok.getLocation(), getCurScope()))
+        Diag(Tok, diag::err_unexpected_typedef_ident) << ParmII;
+
+      // Verify that the argument identifier has not already been mentioned.
+      if (!ParamsSoFar.insert(ParmII)) {
+        Diag(Tok, diag::err_param_redefinition) << ParmII;
+      } else {
+        // Remember this identifier in ParamInfo.
+        GroupId.push_back(DeclaratorChunk::ParamInfo(ParmII,
+                                                     Tok.getLocation(),
+                                                     0));
+      }
+
+      // Eat the identifier.
+      ConsumeToken();
+
+      // The list continues if we see a comma.
+      if (Tok.isNot(tok::comma))
+        break;
+      ConsumeToken(); // eat ','
+    }
+    // Parse type info for this grouped identifers.
+    isInvaild = ExpectAndConsume(tok::colon, diag::err_expected_colon_after,
+                     "var_input names", tok::colon);
+    // Parse the common declaration-specifiers piece.
+    DeclSpec DS(AttrFactory);
+    ParseHeadTypeSpecification(DS);
+    const char *PrevSpec = 0;
+    unsigned DiagID = 0;
+    if (DS.SetTypeQual(DeclSpec::TQ_const, SourceLocation(), PrevSpec, DiagID,
+                       getLangOpts())) {
+      assert(0 && "var_input identifiers set const error!");
+    }
+    // PrototypeContext proper?
+    Declarator ParamDeclarator(DS, Declarator::PrototypeContext);
+    // For every identifier within this group of var_input names construct a
+    // declarator and doing Sema operations.
+    for (int i = 0; i < GroupId.size(); i++) {
+      DeclaratorChunk::ParamInfo info = GroupId[i];
+      ParamDeclarator.SetIdentifier(info.Ident, info.IdentLoc);
+      // Ask the actions module to compute the type for this declarator.
+      Decl *Param = Actions.ActOnParamDeclarator(getCurScope(),
+                                                 ParamDeclarator);
+      // Remember this identifier in ParamInfo.
+      ParamInfo.push_back(DeclaratorChunk::ParamInfo(info.Ident,
+                                                     info.IdentLoc,
+                                                     Param));
+      // For next saved identifier.
+      ParamDeclarator.clear();
+    }
+    
+    isInvaild = ExpectAndConsume(tok::semi, diag::err_expected_semi_after,
+                                 "type specification for var_input names",
+                                 tok::kw_end_var);
+  }
+
+  if (isInvaild) {
+    ParamInfo.clear();
+    D.setInvalidType();
+    return;
+  }
+
+  // Keep 'end_var' will be eat by caller.
+  return;
+}
+
 /// ParseVarInputDeclaration - Parse var_input declarations.
 /// var_input declarations will be handled as const type parameter of member
 /// function.
@@ -1708,13 +1816,13 @@ bool Parser::ParseVarInputDeclaration(SourceLocation POCStartLoc,
 /// ParseVariableDeclarations - Parse the variable declarations.
 ///
 /// Handle the variable declarations like this:
-///   var  names          -   private data member of class
-///   var_input names     -   const type parameter of member function
-///   var_output names    -   public data member of class
-///   var_in_out names    -   reference type parameter of member function
-///   var_external names  -   globals declaration
-///   var_global names    -   globals definition
-///   var_temp names      -   locals of member function
+///   var  names          -   private data member of class.
+///   var_input names     -   const type parameter of member function.
+///   var_output names    -   public data member of class.
+///   var_in_out names    -   reference type parameter of member function.
+///   var_external names  -   globals declaration.
+///   var_global names    -   globals definition.
+///   var_temp names      -   locals of member function.
 ///
 void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl, 
                                        tok::TokenKind POCKind, 
@@ -5632,11 +5740,12 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
   // For st-lang shold be here.
   //if (isFunctionDeclaratorIdentifierList()) {
   if (1) {
-    if (RequiresArg)
-      Diag(Tok, diag::err_argument_required_after_attribute);
+    //if (RequiresArg)
+      //Diag(Tok, diag::err_argument_required_after_attribute);
+    ParseFakeParameterDeclarations(D, ParamInfo);
 
-    ParseFunctionDeclaratorIdentifierList(D, ParamInfo);
-
+    HasProto = ParamInfo.size();
+    //ParseFunctionDeclaratorIdentifierList(D, ParamInfo);
     Tracker.consumeClose();
     RParenLoc = Tracker.getCloseLocation();
     LocalEndLoc = RParenLoc;

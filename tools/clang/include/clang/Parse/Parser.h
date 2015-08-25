@@ -1667,6 +1667,9 @@ private:
   void ParseVariableDeclarations(DeclSpec &DS, tok::TokenKind POCKind, 
                                  SourceLocation StartLoc, 
                                  SourceLocation NameLoc, Decl *TagDecl);
+  void ParseFakeParameterDeclarations(
+         Declarator &D,
+         SmallVector<DeclaratorChunk::ParamInfo, 16> &ParamInfo);
   bool ParseFakeCtorDeclaration(Decl *TagDecl, SourceLocation IdLoc,
                                 Declarator &D);
   void ParseFakeScopeSpecifier(Decl *TagDecl, CXXScopeSpec &SS);
