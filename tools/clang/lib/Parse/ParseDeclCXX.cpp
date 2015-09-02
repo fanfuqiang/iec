@@ -1778,17 +1778,6 @@ void Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
                                             AttributeList *AccessAttrs,
                                        const ParsedTemplateInfo &TemplateInfo,
                                        ParsingDeclRAIIObject *TemplateDiags) {
-  if (Tok.is(tok::at)) {
-    if (getLangOpts().ObjC1 && NextToken().isObjCAtKeyword(tok::objc_defs))
-      Diag(Tok, diag::err_at_defs_cxx);
-    else
-      Diag(Tok, diag::err_at_in_class);
-    
-    ConsumeToken();
-    SkipUntil(tok::r_brace);
-    return;
-  }
-  
   // Access declarations.
   bool MalformedTypeSpec = false;
   if (!TemplateInfo.Kind &&
@@ -1836,58 +1825,14 @@ void Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
     }
   }
 
-  // static_assert-declaration
-  if (Tok.is(tok::kw_static_assert) || Tok.is(tok::kw__Static_assert)) {
-    // FIXME: Check for templates
-    SourceLocation DeclEnd;
-    ParseStaticAssertDeclaration(DeclEnd);
-    return;
-  }
-
-  if (Tok.is(tok::kw_template)) {
-    assert(!TemplateInfo.TemplateParams &&
-           "Nested template improperly parsed?");
-    SourceLocation DeclEnd;
-    ParseDeclarationStartingWithTemplate(Declarator::MemberContext, DeclEnd,
-                                         AS, AccessAttrs);
-    return;
-  }
-
-  // Handle:  member-declaration ::= '__extension__' member-declaration
-  if (Tok.is(tok::kw___extension__)) {
-    // __extension__ silences extension warnings in the subexpression.
-    ExtensionRAIIObject O(Diags);  // Use RAII to do this.
-    ConsumeToken();
-    return ParseCXXClassMemberDeclaration(AS, AccessAttrs,
-                                          TemplateInfo, TemplateDiags);
-  }
-
   // Don't parse FOO:BAR as if it were a typo for FOO::BAR, in this context it
   // is a bitfield.
   ColonProtectionRAIIObject X(*this);
 
   ParsedAttributesWithRange attrs(AttrFactory);
   // Optional C++0x attribute-specifier
-  MaybeParseCXX0XAttributes(attrs);
-  MaybeParseMicrosoftAttributes(attrs);
-
-  if (Tok.is(tok::kw_using)) {
-    ProhibitAttributes(attrs);
-
-    // Eat 'using'.
-    SourceLocation UsingLoc = ConsumeToken();
-
-    if (Tok.is(tok::kw_namespace)) {
-      Diag(UsingLoc, diag::err_using_namespace_in_class);
-      SkipUntil(tok::semi, true, true);
-    } else {
-      SourceLocation DeclEnd;
-      // Otherwise, it must be a using-declaration or an alias-declaration.
-      ParseUsingDeclaration(Declarator::MemberContext, TemplateInfo,
-                            UsingLoc, DeclEnd, AS);
-    }
-    return;
-  }
+  //MaybeParseCXX0XAttributes(attrs);
+  //MaybeParseMicrosoftAttributes(attrs);
 
   // Hold late-parsed attributes so we can attach a Decl to them later.
   LateParsedAttrList CommonLateParsedAttrs;
@@ -1895,15 +1840,16 @@ void Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
   // decl-specifier-seq:
   // Parse the common declaration-specifiers piece.
   ParsingDeclSpec DS(*this, TemplateDiags);
-  DS.takeAttributesFrom(attrs);
+  //DS.takeAttributesFrom(attrs);
   if (MalformedTypeSpec)
     DS.SetTypeSpecError();
   ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DSC_class,
                              &CommonLateParsedAttrs);
 
-  MultiTemplateParamsArg TemplateParams(
+  MultiTemplateParamsArg TemplateParams;
+  /*MultiTemplateParamsArg TemplateParams(
       TemplateInfo.TemplateParams? TemplateInfo.TemplateParams->data() : 0,
-      TemplateInfo.TemplateParams? TemplateInfo.TemplateParams->size() : 0);
+      TemplateInfo.TemplateParams? TemplateInfo.TemplateParams->size() : 0);*/
 
   if (Tok.is(tok::semi)) {
     ConsumeToken();
@@ -1937,23 +1883,9 @@ void Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
       return;
     }
 
-    ParseOptionalCXX0XVirtSpecifierSeq(VS, getCurrentClass().IsInterface);
-
+    //ParseOptionalCXX0XVirtSpecifierSeq(VS, getCurrentClass().IsInterface);
     // If attributes exist after the declarator, but before an '{', parse them.
-    MaybeParseGNUAttributes(DeclaratorInfo, &LateParsedAttrs);
-
-    // MSVC permits pure specifier on inline functions declared at class scope.
-    // Hence check for =0 before checking for function definition.
-    if (getLangOpts().MicrosoftExt && Tok.is(tok::equal) &&
-        DeclaratorInfo.isFunctionDeclarator() && 
-        NextToken().is(tok::numeric_constant)) {
-      EqualLoc = ConsumeToken();
-      Init = ParseInitializer();
-      if (Init.isInvalid())
-        SkipUntil(tok::comma, true, true);
-      else
-        HasInitializer = true;
-    }
+    //MaybeParseGNUAttributes(DeclaratorInfo, &LateParsedAttrs);
 
     FunctionDefinitionKind DefinitionKind = FDK_Declaration;
     // function-definition:
@@ -1964,7 +1896,9 @@ void Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
     if (Tok.is(tok::l_brace) && !getLangOpts().CPlusPlus0x) {
       DefinitionKind = FDK_Definition;
     } else if (DeclaratorInfo.isFunctionDeclarator()) {
-      if (Tok.is(tok::l_brace) || Tok.is(tok::colon) || Tok.is(tok::kw_try)) {
+      // zet
+      DefinitionKind = FDK_Definition;
+      /*if (Tok.is(tok::l_brace) || Tok.is(tok::colon) || Tok.is(tok::kw_try)) {
         DefinitionKind = FDK_Definition;
       } else if (Tok.is(tok::equal)) {
         const Token &KW = NextToken();
@@ -1972,7 +1906,7 @@ void Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
           DefinitionKind = FDK_Defaulted;
         else if (KW.is(tok::kw_delete))
           DefinitionKind = FDK_Deleted;
-      }
+      }*/
     }
 
     if (DefinitionKind) {
@@ -1981,21 +1915,6 @@ void Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
         ConsumeBrace();
         SkipUntil(tok::r_brace, /*StopAtSemi*/false);
         
-        // Consume the optional ';'
-        if (Tok.is(tok::semi))
-          ConsumeToken();
-        return;
-      }
-
-      if (DS.getStorageClassSpec() == DeclSpec::SCS_typedef) {
-        Diag(DeclaratorInfo.getIdentifierLoc(),
-             diag::err_function_declared_typedef);
-        // This recovery skips the entire function body. It would be nice
-        // to simply call ParseCXXInlineMethodDef() below, however Sema
-        // assumes the declarator represents a function, not a typedef.
-        ConsumeBrace();
-        SkipUntil(tok::r_brace, /*StopAtSemi*/false);
-
         // Consume the optional ';'
         if (Tok.is(tok::semi))
           ConsumeToken();
@@ -2290,8 +2209,9 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   if (TagDecl)
     Actions.ActOnTagStartDefinition(getCurScope(), TagDecl);
   
-  SourceLocation FinalLoc;
-
+  //SourceLocation FinalLoc;
+  BalancedDelimiterTracker T(*this, tok::l_brace);
+  T.consumeOpen();
   if (TagDecl)
     Actions.ActOnStartCXXMemberDeclarations(getCurScope(), TagDecl,
                                             SourceLocation(), SourceLocation());
