@@ -7817,8 +7817,8 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D) {
   PushFunctionScope();
 
   // See if this is a redefinition.
-  if (!FD->isLateTemplateParsed())
-    CheckForFunctionRedefinition(FD);
+  //if (!FD->isLateTemplateParsed())
+    //CheckForFunctionRedefinition(FD);
 
   // Builtin functions cannot be defined.
   if (unsigned BuiltinID = FD->getBuiltinID()) {
@@ -7842,15 +7842,15 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D) {
   //   prototype declaration. This warning is issued even if the
   //   definition itself provides a prototype. The aim is to detect
   //   global functions that fail to be declared in header files.
-  if (ShouldWarnAboutMissingPrototype(FD))
-    Diag(FD->getLocation(), diag::warn_missing_prototype) << FD;
+  //if (ShouldWarnAboutMissingPrototype(FD))
+    //Diag(FD->getLocation(), diag::warn_missing_prototype) << FD;
 
   if (FnBodyScope)
     PushDeclContext(FnBodyScope, FD);
 
   // Check the validity of our function parameters
-  CheckParmsForFunctionDef(FD->param_begin(), FD->param_end(),
-                           /*CheckParameterNames=*/true);
+  //CheckParmsForFunctionDef(FD->param_begin(), FD->param_end(),
+   //                        /*CheckParameterNames=*/true);
 
   // Introduce our parameters into the function scope
   for (unsigned p = 0, NumParams = FD->getNumParams(); p < NumParams; ++p) {
@@ -7867,6 +7867,8 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D) {
 
   // If we had any tags defined in the function prototype,
   // introduce them into the function scope.
+  // zet, impossible syntax in st-lang.
+#if 0
   if (FnBodyScope) {
     for (llvm::ArrayRef<NamedDecl*>::iterator I = FD->getDeclsInPrototypeScope().begin(),
            E = FD->getDeclsInPrototypeScope().end(); I != E; ++I) {
@@ -7901,13 +7903,14 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D) {
       }
     }
   }
-
+#endif
   // Ensure that the function's exception specification is instantiated.
-  if (const FunctionProtoType *FPT = FD->getType()->getAs<FunctionProtoType>())
-    ResolveExceptionSpec(D->getLocation(), FPT);
+  //if (const FunctionProtoType *FPT = FD->getType()->getAs<FunctionProtoType>())
+    //ResolveExceptionSpec(D->getLocation(), FPT);
 
   // Checking attributes of current function definition
   // dllimport attribute.
+#if 0
   DLLImportAttr *DA = FD->getAttr<DLLImportAttr>();
   if (DA && (!FD->getAttr<DLLExportAttr>())) {
     // dllimport attribute cannot be directly applied to definition.
@@ -7932,6 +7935,7 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D) {
         << FD->getName() << "dllimport";
     }
   }
+#endif
   // We want to attach documentation to original Decl (which might be
   // a function template).
   ActOnDocumentableDecl(D);

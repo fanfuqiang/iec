@@ -361,12 +361,13 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
 /// (non-nested) C++ class. Now go over the stack of lexed methods that were
 /// collected during its parsing and parse them all.
 void Parser::ParseLexedMethodDefs(ParsingClass &Class) {
-  bool HasTemplateScope = !Class.TopLevelClass && Class.TemplateScope;
-  ParseScope ClassTemplateScope(this, Scope::TemplateParamScope, HasTemplateScope);
-  if (HasTemplateScope)
-    Actions.ActOnReenterTemplateScope(getCurScope(), Class.TagOrTemplate);
+  //bool HasTemplateScope = !Class.TopLevelClass && Class.TemplateScope;
+  //ParseScope ClassTemplateScope(this, Scope::TemplateParamScope, HasTemplateScope);
+  //if (HasTemplateScope)
+    //Actions.ActOnReenterTemplateScope(getCurScope(), Class.TagOrTemplate);
 
   bool HasClassScope = !Class.TopLevelClass;
+  // zet, delete?
   ParseScope ClassScope(this, Scope::ClassScope|Scope::DeclScope,
                         HasClassScope);
 
@@ -377,9 +378,9 @@ void Parser::ParseLexedMethodDefs(ParsingClass &Class) {
 
 void Parser::ParseLexedMethodDef(LexedMethod &LM) {
   // If this is a member template, introduce the template parameter scope.
-  ParseScope TemplateScope(this, Scope::TemplateParamScope, LM.TemplateScope);
-  if (LM.TemplateScope)
-    Actions.ActOnReenterTemplateScope(getCurScope(), LM.D);
+  //ParseScope TemplateScope(this, Scope::TemplateParamScope, LM.TemplateScope);
+  //if (LM.TemplateScope)
+    //Actions.ActOnReenterTemplateScope(getCurScope(), LM.D);
 
   // Save the current token position.
   SourceLocation origLoc = Tok.getLocation();
@@ -392,38 +393,42 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
 
   // Consume the previously pushed token.
   ConsumeAnyToken();
-  assert((Tok.is(tok::l_brace) || Tok.is(tok::colon) || Tok.is(tok::kw_try))
-         && "Inline method not starting with '{', ':' or 'try'");
+  // zet, Current token should be part of statement in st-lang.
+  /*assert((Tok.is(tok::l_brace) || Tok.is(tok::colon) || Tok.is(tok::kw_try))
+         && "Inline method not starting with '{', ':' or 'try'");*/
 
   // Parse the method body. Function body parsing code is similar enough
   // to be re-used for method bodies as well.
   ParseScope FnScope(this, Scope::FnScope|Scope::DeclScope);
   Actions.ActOnStartOfFunctionDef(getCurScope(), LM.D);
 
-  if (Tok.is(tok::kw_try)) {
-    ParseFunctionTryBlock(LM.D, FnScope);
-    assert(!PP.getSourceManager().isBeforeInTranslationUnit(origLoc,
-                                                         Tok.getLocation()) &&
-           "ParseFunctionTryBlock went over the cached tokens!");
-    // There could be leftover tokens (e.g. because of an error).
-    // Skip through until we reach the original token position.
-    while (Tok.getLocation() != origLoc && Tok.isNot(tok::eof))
-      ConsumeAnyToken();
-    return;
-  }
-  if (Tok.is(tok::colon)) {
-    ParseConstructorInitializer(LM.D);
+  //if (Tok.is(tok::kw_try)) {
+  //  ParseFunctionTryBlock(LM.D, FnScope);
+  //  assert(!PP.getSourceManager().isBeforeInTranslationUnit(origLoc,
+  //                                                       Tok.getLocation()) &&
+  //         "ParseFunctionTryBlock went over the cached tokens!");
+  //  // There could be leftover tokens (e.g. because of an error).
+  //  // Skip through until we reach the original token position.
+  //  while (Tok.getLocation() != origLoc && Tok.isNot(tok::eof))
+  //    ConsumeAnyToken();
+  //  return;
+  //}
+  //if (Tok.is(tok::colon)) {
+  //  ParseConstructorInitializer(LM.D);
 
-    // Error recovery.
-    if (!Tok.is(tok::l_brace)) {
-      FnScope.Exit();
-      Actions.ActOnFinishFunctionBody(LM.D, 0);
-      while (Tok.getLocation() != origLoc && Tok.isNot(tok::eof))
-        ConsumeAnyToken();
-      return;
-    }
-  } else
-    Actions.ActOnDefaultCtorInitializers(LM.D);
+  //  // Error recovery.
+  //  if (!Tok.is(tok::l_brace)) {
+  //    FnScope.Exit();
+  //    Actions.ActOnFinishFunctionBody(LM.D, 0);
+  //    while (Tok.getLocation() != origLoc && Tok.isNot(tok::eof))
+  //      ConsumeAnyToken();
+  //    return;
+  //  }
+  //} else
+  //  Actions.ActOnDefaultCtorInitializers(LM.D);
+  
+  // Set the funtion_body as the default ctor of which it declarated whitin.
+  Actions.ActOnDefaultCtorInitializers(LM.D);
 
   ParseFunctionStatementBody(LM.D, FnScope);
 

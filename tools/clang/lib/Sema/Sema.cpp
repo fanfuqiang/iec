@@ -971,6 +971,9 @@ void Sema::PushFunctionScope() {
     return;
   }
   
+  // zet, Only use the top function scope in st-lang, so when we here must be a
+  // error.
+  assert(0 && "function scope level more than one");
   FunctionScopes.push_back(new FunctionScopeInfo(getDiagnostics()));
 }
 
