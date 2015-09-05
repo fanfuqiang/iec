@@ -84,7 +84,7 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts, bool OnlyStatement,
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
   ParsedAttributesWithRange Attrs(AttrFactory);
-  MaybeParseCXX0XAttributes(Attrs, 0, /*MightBeObjCMessageSend*/ true);
+  //MaybeParseCXX0XAttributes(Attrs, 0, /*MightBeObjCMessageSend*/ true);
 
   StmtResult Res = ParseStatementOrDeclarationAfterAttributes(Stmts,
                                  OnlyStatement, TrailingElseLoc, Attrs);
@@ -95,6 +95,7 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts, bool OnlyStatement,
   if (Attrs.empty() || Res.isInvalid())
     return Res;
 
+  assert(0 && "attributes should be empty");
   return Actions.ProcessStmtAttributes(Res.get(), Attrs.getList(), Attrs.Range);
 }
 
@@ -768,19 +769,22 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
   Sema::FPContractStateRAII SaveFPContractState(Actions);
 
   InMessageExpressionRAIIObject InMessage(*this, false);
-  BalancedDelimiterTracker T(*this, tok::l_brace);
+  /*BalancedDelimiterTracker T(*this, tok::l_brace);
   if (T.consumeOpen())
-    return StmtError();
+    return StmtError();*/
 
   Sema::CompoundScopeRAII CompoundScope(Actions);
 
   // Parse any pragmas at the beginning of the compound statement.
-  ParseCompoundStatementLeadingPragmas();
+  //ParseCompoundStatementLeadingPragmas();
 
   StmtVector Stmts;
 
+  // zet, Remember start location of statement-list, but donot eat any token.
+  SourceLocation StmtStartLoc = Tok.getLocation();
   // "__label__ X, Y, Z;" is the GNU "Local Label" extension.  These are
   // only allowed at the start of a compound stmt regardless of the language.
+#if 0
   while (Tok.is(tok::kw___label__)) {
     SourceLocation LabelLoc = ConsumeToken();
     Diag(LabelLoc, diag::ext_gnu_local_label);
@@ -810,6 +814,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
     if (R.isUsable())
       Stmts.push_back(R.release());
   }
+#endif
 
   while (Tok.isNot(tok::r_brace) && Tok.isNot(tok::eof)) {
     if (Tok.is(tok::annot_pragma_unused)) {
@@ -824,6 +829,10 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
     }
 
     StmtResult R;
+    // zet, We can sure only need this according to the syntax of st-lang.
+    // Also, the second argument only should be true(OnlyStatement).
+    R = ParseStatementOrDeclaration(Stmts, true);
+#if 0
     if (Tok.isNot(tok::kw___extension__)) {
       R = ParseStatementOrDeclaration(Stmts, false);
     } else {
@@ -865,6 +874,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
         R = Actions.ActOnExprStmt(Actions.MakeFullExpr(Res.get()));
       }
     }
+#endif
 
     if (R.isUsable())
       Stmts.push_back(R.release());
@@ -873,17 +883,19 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
   SourceLocation CloseLoc = Tok.getLocation();
 
   // We broke out of the while loop because we found a '}' or EOF.
-  if (Tok.isNot(tok::r_brace)) {
-    Diag(Tok, diag::err_expected_rbrace);
-    Diag(T.getOpenLocation(), diag::note_matching) << "{";
-    // Recover by creating a compound statement with what we parsed so far,
-    // instead of dropping everything and returning StmtError();
-  } else {
-    if (!T.consumeClose())
-      CloseLoc = T.getCloseLocation();
-  }
+  // zet, Do this in outer calling function, because we need know the value of
+  // the end marker keyword(end_function?/end_function_block?/end_program?)
+  //if (Tok.isNot(tok::r_brace)) {
+  //  Diag(Tok, diag::err_expected_rbrace);
+  //  Diag(T.getOpenLocation(), diag::note_matching) << "{";
+  //  // Recover by creating a compound statement with what we parsed so far,
+  //  // instead of dropping everything and returning StmtError();
+  //} else {
+  //  if (!T.consumeClose())
+  //    CloseLoc = T.getCloseLocation();
+  //}
 
-  return Actions.ActOnCompoundStmt(T.getOpenLocation(), CloseLoc,
+  return Actions.ActOnCompoundStmt(StmtStartLoc, CloseLoc,
                                    Stmts, isStmtExpr);
 }
 
@@ -2084,10 +2096,10 @@ Decl *Parser::ParseFunctionStatementBody(Decl *Decl, ParseScope &BodyScope) {
   assert(Tok.is(tok::l_brace));
   SourceLocation LBraceLoc = Tok.getLocation();
 
-  if (SkipFunctionBodies && trySkippingFunctionBody()) {
+  /*if (SkipFunctionBodies && trySkippingFunctionBody()) {
     BodyScope.Exit();
     return Actions.ActOnFinishFunctionBody(Decl, 0);
-  }
+  }*/
 
   PrettyDeclStackTraceEntry CrashInfo(Actions, Decl, LBraceLoc,
                                       "parsing function body");
