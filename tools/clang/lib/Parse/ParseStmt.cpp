@@ -113,24 +113,24 @@ Retry:
   tok::TokenKind Kind  = Tok.getKind();
   SourceLocation AtLoc;
   switch (Kind) {
-  case tok::at: // May be a @try or @throw statement
-    {
-      ProhibitAttributes(Attrs); // TODO: is it correct?
-      AtLoc = ConsumeToken();  // consume @
-      return ParseObjCAtStatement(AtLoc);
-    }
+  //case tok::at: // May be a @try or @throw statement
+  //  {
+  //    ProhibitAttributes(Attrs); // TODO: is it correct?
+  //    AtLoc = ConsumeToken();  // consume @
+  //    return ParseObjCAtStatement(AtLoc);
+  //  }
 
-  case tok::code_completion:
-    Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Statement);
-    cutOffParsing();
-    return StmtError();
+  //case tok::code_completion:
+  //  Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Statement);
+  //  cutOffParsing();
+  //  return StmtError();
 
   case tok::identifier: {
     Token Next = NextToken();
-    if (Next.is(tok::colon)) { // C99 6.8.1: labeled-statement
-      // identifier ':' statement
-      return ParseLabeledStatement(Attrs);
-    }
+    //if (Next.is(tok::colon)) { // C99 6.8.1: labeled-statement
+    //  // identifier ':' statement
+    //  return ParseLabeledStatement(Attrs);
+    //}
 
     // Look up the identifier, and typo-correct it to a keyword if it's not
     // found.

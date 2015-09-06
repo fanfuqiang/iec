@@ -1222,7 +1222,7 @@ Parser::TryAnnotateName(bool IsAddressOfOperand,
   const bool WasScopeAnnotation = Tok.is(tok::annot_cxxscope);
 
   CXXScopeSpec SS;
-  if (getLangOpts().CPlusPlus &&
+  /*if (getLangOpts().CPlusPlus &&
       ParseOptionalCXXScopeSpecifier(SS, ParsedType(), EnteringContext))
     return ANK_Error;
 
@@ -1231,21 +1231,21 @@ Parser::TryAnnotateName(bool IsAddressOfOperand,
                                                   !WasScopeAnnotation))
       return ANK_Error;
     return ANK_Unresolved;
-  }
+  }*/
 
   IdentifierInfo *Name = Tok.getIdentifierInfo();
   SourceLocation NameLoc = Tok.getLocation();
 
   // FIXME: Move the tentative declaration logic into ClassifyName so we can
   // typo-correct to tentatively-declared identifiers.
-  if (isTentativelyDeclared(Name)) {
-    // Identifier has been tentatively declared, and thus cannot be resolved as
-    // an expression. Fall back to annotating it as a type.
-    if (TryAnnotateTypeOrScopeTokenAfterScopeSpec(EnteringContext, false, SS,
-                                                  !WasScopeAnnotation))
-      return ANK_Error;
-    return Tok.is(tok::annot_typename) ? ANK_Success : ANK_TentativeDecl;
-  }
+  //if (isTentativelyDeclared(Name)) {
+  //  // Identifier has been tentatively declared, and thus cannot be resolved as
+  //  // an expression. Fall back to annotating it as a type.
+  //  if (TryAnnotateTypeOrScopeTokenAfterScopeSpec(EnteringContext, false, SS,
+  //                                                !WasScopeAnnotation))
+  //    return ANK_Error;
+  //  return Tok.is(tok::annot_typename) ? ANK_Success : ANK_TentativeDecl;
+  //}
 
   Token Next = NextToken();
 
@@ -1262,27 +1262,27 @@ Parser::TryAnnotateName(bool IsAddressOfOperand,
     return ANK_Error;
 
   case Sema::NC_Keyword:
-    // The identifier was typo-corrected to a keyword.
-    Tok.setIdentifierInfo(Name);
-    Tok.setKind(Name->getTokenID());
-    PP.TypoCorrectToken(Tok);
-    if (SS.isNotEmpty())
-      AnnotateScopeToken(SS, !WasScopeAnnotation);
-    // We've "annotated" this as a keyword.
-    return ANK_Success;
+    //// The identifier was typo-corrected to a keyword.
+    //Tok.setIdentifierInfo(Name);
+    //Tok.setKind(Name->getTokenID());
+    //PP.TypoCorrectToken(Tok);
+    //if (SS.isNotEmpty())
+    //  AnnotateScopeToken(SS, !WasScopeAnnotation);
+    //// We've "annotated" this as a keyword.
+    //return ANK_Success;
 
   case Sema::NC_Unknown:
     // It's not something we know about. Leave it unannotated.
     break;
 
   case Sema::NC_Type:
-    Tok.setKind(tok::annot_typename);
+    /*Tok.setKind(tok::annot_typename);
     setTypeAnnotation(Tok, Classification.getType());
     Tok.setAnnotationEndLoc(NameLoc);
     if (SS.isNotEmpty())
       Tok.setLocation(SS.getBeginLoc());
     PP.AnnotateCachedTokens(Tok);
-    return ANK_Success;
+    return ANK_Success;*/
 
   case Sema::NC_Expression:
     Tok.setKind(tok::annot_primary_expr);
@@ -1294,23 +1294,23 @@ Parser::TryAnnotateName(bool IsAddressOfOperand,
     return ANK_Success;
 
   case Sema::NC_TypeTemplate:
-    if (Next.isNot(tok::less)) {
-      // This may be a type template being used as a template template argument.
-      if (SS.isNotEmpty())
-        AnnotateScopeToken(SS, !WasScopeAnnotation);
-      return ANK_TemplateName;
-    }
+    //if (Next.isNot(tok::less)) {
+    //  // This may be a type template being used as a template template argument.
+    //  if (SS.isNotEmpty())
+    //    AnnotateScopeToken(SS, !WasScopeAnnotation);
+    //  return ANK_TemplateName;
+    //}
     // Fall through.
   case Sema::NC_FunctionTemplate: {
-    // We have a type or function template followed by '<'.
-    ConsumeToken();
-    UnqualifiedId Id;
-    Id.setIdentifier(Name, NameLoc);
-    if (AnnotateTemplateIdToken(
-            TemplateTy::make(Classification.getTemplateName()),
-            Classification.getTemplateNameKind(), SS, SourceLocation(), Id))
-      return ANK_Error;
-    return ANK_Success;
+    //// We have a type or function template followed by '<'.
+    //ConsumeToken();
+    //UnqualifiedId Id;
+    //Id.setIdentifier(Name, NameLoc);
+    //if (AnnotateTemplateIdToken(
+    //        TemplateTy::make(Classification.getTemplateName()),
+    //        Classification.getTemplateNameKind(), SS, SourceLocation(), Id))
+    //  return ANK_Error;
+    //return ANK_Success;
   }
 
   case Sema::NC_NestedNameSpecifier:
