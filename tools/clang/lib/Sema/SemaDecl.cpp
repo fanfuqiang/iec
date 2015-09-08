@@ -608,11 +608,11 @@ Sema::NameClassification Sema::ClassifyName(Scope *S,
   // synthesized instance variables), if we're in an Objective-C method.
   // FIXME: This lookup really, really needs to be folded in to the normal
   // unqualified lookup mechanism.
-  if (!SS.isSet() && CurMethod && !isResultTypeOrTemplate(Result, NextToken)) {
+  /*if (!SS.isSet() && CurMethod && !isResultTypeOrTemplate(Result, NextToken)) {
     ExprResult E = LookupInObjCMethod(Result, S, Name, true);
     if (E.get() || E.isInvalid())
       return E;
-  }
+  }*/
   
   bool SecondTry = false;
   bool IsFilteredTemplateName = false;
@@ -777,7 +777,8 @@ Corrected:
     // Diagnose the ambiguity and return an error.
     return NameClassification::Error();
   }
-  
+
+#if 0
   if (getLangOpts().CPlusPlus && NextToken.is(tok::less) &&
       (IsFilteredTemplateName || hasAnyAcceptableTemplateNames(Result))) {
     // C++ [temp.names]p3:
@@ -821,6 +822,7 @@ Corrected:
       return NameClassification::TypeTemplate(Template);
     }
   }
+#endif
 
   NamedDecl *FirstDecl = (*Result.begin())->getUnderlyingDecl();
   if (TypeDecl *Type = dyn_cast<TypeDecl>(FirstDecl)) {
@@ -831,32 +833,32 @@ Corrected:
     return ParsedType::make(T);
   }
 
-  ObjCInterfaceDecl *Class = dyn_cast<ObjCInterfaceDecl>(FirstDecl);
-  if (!Class) {
-    // FIXME: It's unfortunate that we don't have a Type node for handling this.
-    if (ObjCCompatibleAliasDecl *Alias 
-                                = dyn_cast<ObjCCompatibleAliasDecl>(FirstDecl))
-      Class = Alias->getClassInterface();
-  }
-  
-  if (Class) {
-    DiagnoseUseOfDecl(Class, NameLoc);
-    
-    if (NextToken.is(tok::period)) {
-      // Interface. <something> is parsed as a property reference expression.
-      // Just return "unknown" as a fall-through for now.
-      Result.suppressDiagnostics();
-      return NameClassification::Unknown();
-    }
-    
-    QualType T = Context.getObjCInterfaceType(Class);
-    return ParsedType::make(T);
-  }
+  //ObjCInterfaceDecl *Class = dyn_cast<ObjCInterfaceDecl>(FirstDecl);
+  //if (!Class) {
+  //  // FIXME: It's unfortunate that we don't have a Type node for handling this.
+  //  if (ObjCCompatibleAliasDecl *Alias 
+  //                              = dyn_cast<ObjCCompatibleAliasDecl>(FirstDecl))
+  //    Class = Alias->getClassInterface();
+  //}
+  //
+  //if (Class) {
+  //  DiagnoseUseOfDecl(Class, NameLoc);
+  //  
+  //  if (NextToken.is(tok::period)) {
+  //    // Interface. <something> is parsed as a property reference expression.
+  //    // Just return "unknown" as a fall-through for now.
+  //    Result.suppressDiagnostics();
+  //    return NameClassification::Unknown();
+  //  }
+  //  
+  //  QualType T = Context.getObjCInterfaceType(Class);
+  //  return ParsedType::make(T);
+  //}
 
   // We can have a type template here if we're classifying a template argument.
-  if (isa<TemplateDecl>(FirstDecl) && !isa<FunctionTemplateDecl>(FirstDecl))
+  /*if (isa<TemplateDecl>(FirstDecl) && !isa<FunctionTemplateDecl>(FirstDecl))
     return NameClassification::TypeTemplate(
-        TemplateName(cast<TemplateDecl>(FirstDecl)));
+        TemplateName(cast<TemplateDecl>(FirstDecl)));*/
 
   // Check for a tag type hidden by a non-type decl in a few cases where it
   // seems likely a type is wanted instead of the non-type that was found.

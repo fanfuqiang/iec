@@ -1224,14 +1224,14 @@ Parser::TryAnnotateName(bool IsAddressOfOperand,
   CXXScopeSpec SS;
   /*if (getLangOpts().CPlusPlus &&
       ParseOptionalCXXScopeSpecifier(SS, ParsedType(), EnteringContext))
-    return ANK_Error;
+    return ANK_Error;*/
 
   if (Tok.isNot(tok::identifier) || SS.isInvalid()) {
     if (TryAnnotateTypeOrScopeTokenAfterScopeSpec(EnteringContext, false, SS,
                                                   !WasScopeAnnotation))
       return ANK_Error;
     return ANK_Unresolved;
-  }*/
+  }
 
   IdentifierInfo *Name = Tok.getIdentifierInfo();
   SourceLocation NameLoc = Tok.getLocation();
@@ -1262,27 +1262,27 @@ Parser::TryAnnotateName(bool IsAddressOfOperand,
     return ANK_Error;
 
   case Sema::NC_Keyword:
-    //// The identifier was typo-corrected to a keyword.
-    //Tok.setIdentifierInfo(Name);
-    //Tok.setKind(Name->getTokenID());
-    //PP.TypoCorrectToken(Tok);
-    //if (SS.isNotEmpty())
-    //  AnnotateScopeToken(SS, !WasScopeAnnotation);
-    //// We've "annotated" this as a keyword.
-    //return ANK_Success;
+    // The identifier was typo-corrected to a keyword.
+    Tok.setIdentifierInfo(Name);
+    Tok.setKind(Name->getTokenID());
+    PP.TypoCorrectToken(Tok);
+    if (SS.isNotEmpty())
+      AnnotateScopeToken(SS, !WasScopeAnnotation);
+    // We've "annotated" this as a keyword.
+    return ANK_Success;
 
   case Sema::NC_Unknown:
     // It's not something we know about. Leave it unannotated.
     break;
 
   case Sema::NC_Type:
-    /*Tok.setKind(tok::annot_typename);
+    Tok.setKind(tok::annot_typename);
     setTypeAnnotation(Tok, Classification.getType());
     Tok.setAnnotationEndLoc(NameLoc);
     if (SS.isNotEmpty())
       Tok.setLocation(SS.getBeginLoc());
     PP.AnnotateCachedTokens(Tok);
-    return ANK_Success;*/
+    return ANK_Success;
 
   case Sema::NC_Expression:
     Tok.setKind(tok::annot_primary_expr);
@@ -1294,23 +1294,23 @@ Parser::TryAnnotateName(bool IsAddressOfOperand,
     return ANK_Success;
 
   case Sema::NC_TypeTemplate:
-    //if (Next.isNot(tok::less)) {
-    //  // This may be a type template being used as a template template argument.
-    //  if (SS.isNotEmpty())
-    //    AnnotateScopeToken(SS, !WasScopeAnnotation);
-    //  return ANK_TemplateName;
-    //}
+    if (Next.isNot(tok::less)) {
+      // This may be a type template being used as a template template argument.
+      if (SS.isNotEmpty())
+        AnnotateScopeToken(SS, !WasScopeAnnotation);
+      return ANK_TemplateName;
+    }
     // Fall through.
   case Sema::NC_FunctionTemplate: {
-    //// We have a type or function template followed by '<'.
-    //ConsumeToken();
-    //UnqualifiedId Id;
-    //Id.setIdentifier(Name, NameLoc);
-    //if (AnnotateTemplateIdToken(
-    //        TemplateTy::make(Classification.getTemplateName()),
-    //        Classification.getTemplateNameKind(), SS, SourceLocation(), Id))
-    //  return ANK_Error;
-    //return ANK_Success;
+    // We have a type or function template followed by '<'.
+    ConsumeToken();
+    UnqualifiedId Id;
+    Id.setIdentifier(Name, NameLoc);
+    if (AnnotateTemplateIdToken(
+            TemplateTy::make(Classification.getTemplateName()),
+            Classification.getTemplateNameKind(), SS, SourceLocation(), Id))
+      return ANK_Error;
+    return ANK_Success;
   }
 
   case Sema::NC_NestedNameSpecifier:
@@ -1471,36 +1471,37 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(bool EnteringContext,
       return false;
     }
 
-    if (!getLangOpts().CPlusPlus) {
-      // If we're in C, we can't have :: tokens at all (the lexer won't return
-      // them).  If the identifier is not a type, then it can't be scope either,
-      // just early exit.
-      return false;
-    }
+    return false; // zet
+    //if (!getLangOpts().CPlusPlus) {
+    //  // If we're in C, we can't have :: tokens at all (the lexer won't return
+    //  // them).  If the identifier is not a type, then it can't be scope either,
+    //  // just early exit.
+    //  return false;
+    //}
 
     // If this is a template-id, annotate with a template-id or type token.
-    if (NextToken().is(tok::less)) {
-      TemplateTy Template;
-      UnqualifiedId TemplateName;
-      TemplateName.setIdentifier(Tok.getIdentifierInfo(), Tok.getLocation());
-      bool MemberOfUnknownSpecialization;
-      if (TemplateNameKind TNK
-          = Actions.isTemplateName(getCurScope(), SS,
-                                   /*hasTemplateKeyword=*/false, TemplateName,
-                                   /*ObjectType=*/ ParsedType(),
-                                   EnteringContext,
-                                   Template, MemberOfUnknownSpecialization)) {
-        // Consume the identifier.
-        ConsumeToken();
-        if (AnnotateTemplateIdToken(Template, TNK, SS, SourceLocation(),
-                                    TemplateName)) {
-          // If an unrecoverable error occurred, we need to return true here,
-          // because the token stream is in a damaged state.  We may not return
-          // a valid identifier.
-          return true;
-        }
-      }
-    }
+    //if (NextToken().is(tok::less)) {
+    //  TemplateTy Template;
+    //  UnqualifiedId TemplateName;
+    //  TemplateName.setIdentifier(Tok.getIdentifierInfo(), Tok.getLocation());
+    //  bool MemberOfUnknownSpecialization;
+    //  if (TemplateNameKind TNK
+    //      = Actions.isTemplateName(getCurScope(), SS,
+    //                               /*hasTemplateKeyword=*/false, TemplateName,
+    //                               /*ObjectType=*/ ParsedType(),
+    //                               EnteringContext,
+    //                               Template, MemberOfUnknownSpecialization)) {
+    //    // Consume the identifier.
+    //    ConsumeToken();
+    //    if (AnnotateTemplateIdToken(Template, TNK, SS, SourceLocation(),
+    //                                TemplateName)) {
+    //      // If an unrecoverable error occurred, we need to return true here,
+    //      // because the token stream is in a damaged state.  We may not return
+    //      // a valid identifier.
+    //      return true;
+    //    }
+    //  }
+    //}
 
     // The current token, which is either an identifier or a
     // template-id, is not part of the annotation. Fall through to
@@ -1508,21 +1509,22 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(bool EnteringContext,
     // specifier annotation.
   }
 
-  if (Tok.is(tok::annot_template_id)) {
-    TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
-    if (TemplateId->Kind == TNK_Type_template) {
-      // A template-id that refers to a type was parsed into a
-      // template-id annotation in a context where we weren't allowed
-      // to produce a type annotation token. Update the template-id
-      // annotation token to a type annotation token now.
-      AnnotateTemplateIdTokenAsType();
-      return false;
-    }
-  }
+  //if (Tok.is(tok::annot_template_id)) {
+  //  TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
+  //  if (TemplateId->Kind == TNK_Type_template) {
+  //    // A template-id that refers to a type was parsed into a
+  //    // template-id annotation in a context where we weren't allowed
+  //    // to produce a type annotation token. Update the template-id
+  //    // annotation token to a type annotation token now.
+  //    AnnotateTemplateIdTokenAsType();
+  //    return false;
+  //  }
+  //}
 
   if (SS.isEmpty())
     return false;
 
+  assert(0 && "CXXScopeSpec shoule be empty");
   // A C++ scope specifier that isn't followed by a typename.
   AnnotateScopeToken(SS, IsNewScope);
   return false;
