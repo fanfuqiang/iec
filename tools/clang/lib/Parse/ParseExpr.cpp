@@ -828,6 +828,7 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
     IdentifierInfo &II = *Tok.getIdentifierInfo();
     SourceLocation ILoc = ConsumeToken();
 
+#if 0
     // Support 'Class.property' and 'super.property' notation.
     if (getLangOpts().ObjC1 && Tok.is(tok::period) &&
         (Actions.getTypeName(II, ILoc, getCurScope()) ||
@@ -896,6 +897,7 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
             break;
           }
     }
+#endif
     
     // Make sure to pass down the right value for isAddressOfOperand.
     if (isAddressOfOperand && isPostfixExpressionSuffixStart())

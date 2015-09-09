@@ -1730,7 +1730,8 @@ ExprResult Sema::ActOnIdExpression(Scope *S,
   //        names a dependent type.
   // Determine whether this is a member of an unknown specialization;
   // we need to handle these differently.
-  bool DependentID = false;
+  // zet
+  /*bool DependentID = false;
   if (Name.getNameKind() == DeclarationName::CXXConversionFunctionName &&
       Name.getCXXNameType()->isDependentType()) {
     DependentID = true;
@@ -1745,13 +1746,14 @@ ExprResult Sema::ActOnIdExpression(Scope *S,
 
   if (DependentID)
     return ActOnDependentIdExpression(SS, TemplateKWLoc, NameInfo,
-                                      IsAddressOfOperand, TemplateArgs);
+                                      IsAddressOfOperand, TemplateArgs);*/
 
   // Perform the required lookup.
   LookupResult R(*this, NameInfo, 
                  (Id.getKind() == UnqualifiedId::IK_ImplicitSelfParam) 
                   ? LookupObjCImplicitSelfParam : LookupOrdinaryName);
   if (TemplateArgs) {
+    assert(0 && "template args");
     // Lookup the template name again to correctly establish the context in
     // which it was found. This is really unfortunate as we already did the
     // lookup to determine that it was a template name in the first place. If
@@ -1777,14 +1779,15 @@ ExprResult Sema::ActOnIdExpression(Scope *S,
 
     // If this reference is in an Objective-C method, then we need to do
     // some special Objective-C lookup, too.
-    if (IvarLookupFollowUp) {
+    // zet, objc
+    /*if (IvarLookupFollowUp) {
       ExprResult E(LookupInObjCMethod(R, S, II, true));
       if (E.isInvalid())
         return ExprError();
 
       if (Expr *Ex = E.takeAs<Expr>())
         return Owned(Ex);
-    }
+    }*/
   }
 
   if (R.isAmbiguous())
@@ -1792,9 +1795,11 @@ ExprResult Sema::ActOnIdExpression(Scope *S,
 
   // Determine whether this name might be a candidate for
   // argument-dependent lookup.
+  // zet, ADL should be false.
   bool ADL = UseArgumentDependentLookup(SS, R, HasTrailingLParen);
 
   if (R.empty() && !ADL) {
+    assert(0 && "LookupParsedName return empty");
     // Otherwise, this could be an implicitly declared function reference (legal
     // in C90, extension in C99, forbidden in C++).
     if (HasTrailingLParen && II && !getLangOpts().CPlusPlus) {
@@ -2359,14 +2364,14 @@ Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
   if (CheckDeclInExpr(*this, Loc, D))
     return ExprError();
 
-  if (TemplateDecl *Template = dyn_cast<TemplateDecl>(D)) {
-    // Specifically diagnose references to class templates that are missing
-    // a template argument list.
-    Diag(Loc, diag::err_template_decl_ref)
-      << Template << SS.getRange();
-    Diag(Template->getLocation(), diag::note_template_decl_here);
-    return ExprError();
-  }
+  //if (TemplateDecl *Template = dyn_cast<TemplateDecl>(D)) {
+  //  // Specifically diagnose references to class templates that are missing
+  //  // a template argument list.
+  //  Diag(Loc, diag::err_template_decl_ref)
+  //    << Template << SS.getRange();
+  //  Diag(Template->getLocation(), diag::note_template_decl_here);
+  //  return ExprError();
+  //}
 
   // Make sure that we're referring to a value.
   ValueDecl *VD = dyn_cast<ValueDecl>(D);
