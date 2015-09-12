@@ -1749,9 +1749,9 @@ ExprResult Sema::ActOnIdExpression(Scope *S,
                                       IsAddressOfOperand, TemplateArgs);*/
 
   // Perform the required lookup.
-  LookupResult R(*this, NameInfo, 
-                 (Id.getKind() == UnqualifiedId::IK_ImplicitSelfParam) 
-                  ? LookupObjCImplicitSelfParam : LookupOrdinaryName);
+  LookupResult R(*this, NameInfo, LookupOrdinaryName);
+                 //(Id.getKind() == UnqualifiedId::IK_ImplicitSelfParam) 
+                 //? LookupObjCImplicitSelfParam : LookupOrdinaryName);
   if (TemplateArgs) {
     assert(0 && "template args");
     // Lookup the template name again to correctly establish the context in
@@ -1773,9 +1773,11 @@ ExprResult Sema::ActOnIdExpression(Scope *S,
 
     // If the result might be in a dependent base class, this is a dependent 
     // id-expression.
-    if (R.getResultKind() == LookupResult::NotFoundInCurrentInstantiation)
+    if (R.getResultKind() == LookupResult::NotFoundInCurrentInstantiation) {
+      assert(0 && "LookupResult::NotFoundInCurrentInstantiation");
       return ActOnDependentIdExpression(SS, TemplateKWLoc, NameInfo,
                                         IsAddressOfOperand, TemplateArgs);
+    }
 
     // If this reference is in an Objective-C method, then we need to do
     // some special Objective-C lookup, too.
@@ -1882,8 +1884,9 @@ ExprResult Sema::ActOnIdExpression(Scope *S,
     else
       MightBeImplicitMember = isa<FieldDecl>(R.getFoundDecl()) ||
                               isa<IndirectFieldDecl>(R.getFoundDecl());
-
     if (MightBeImplicitMember)
+      // zet, We can use the variables declararted in POC declaration, and maybe
+      // this variables impelemetated by facked cpp-like class data member.
       return BuildPossibleImplicitMemberExpr(SS, TemplateKWLoc,
                                              R, TemplateArgs);
   }
