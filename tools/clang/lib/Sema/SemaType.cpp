@@ -602,7 +602,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   ASTContext &Context = S.Context;
 
   QualType Result;
-  switch (DS.getTypeSpecType()) {
+  switch (unsigned val = DS.getTypeSpecType()) {
+  assert(val < TST_error + 1 && "type sepcifier type value overflow");
   case DeclSpec::TST_void:
     Result = Context.VoidTy;
     break;
@@ -617,7 +618,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       Result = Context.UnsignedCharTy;
     }
     break;
-  case DeclSpec::TST_wchar:
+  /*case DeclSpec::TST_wchar:
     if (DS.getTypeSpecSign() == DeclSpec::TSS_unspecified)
       Result = Context.WCharTy;
     else if (DS.getTypeSpecSign() == DeclSpec::TSS_signed) {
@@ -631,8 +632,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
         << DS.getSpecifierName(DS.getTypeSpecType());
       Result = Context.getUnsignedWCharType();
     }
-    break;
-  case DeclSpec::TST_char16:
+    break;*/
+  /*case DeclSpec::TST_char16:
       assert(DS.getTypeSpecSign() == DeclSpec::TSS_unspecified &&
         "Unknown TSS value");
       Result = Context.Char16Ty;
@@ -641,7 +642,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       assert(DS.getTypeSpecSign() == DeclSpec::TSS_unspecified &&
         "Unknown TSS value");
       Result = Context.Char32Ty;
-    break;
+    break;*/
   case DeclSpec::TST_unspecified:
     // "<proto1,proto2>" is an objc qualified ID with a missing id.
     if (DeclSpec::ProtocolQualifierListTy PQ = DS.getProtocolQualifiers()) {
@@ -741,13 +742,13 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     }
     break;
   }
-  case DeclSpec::TST_int128:
+  /*case DeclSpec::TST_int128:
     if (DS.getTypeSpecSign() == DeclSpec::TSS_unsigned)
       Result = Context.UnsignedInt128Ty;
     else
       Result = Context.Int128Ty;
-    break;
-  case DeclSpec::TST_half: Result = Context.HalfTy; break;
+    break;*/
+  //case DeclSpec::TST_half: Result = Context.HalfTy; break;
   case DeclSpec::TST_float: Result = Context.FloatTy; break;
   case DeclSpec::TST_double:
     if (DS.getTypeSpecWidth() == DeclSpec::TSW_long)
@@ -761,18 +762,18 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     }
     break;
   case DeclSpec::TST_bool: Result = Context.BoolTy; break; // _Bool or bool
-  case DeclSpec::TST_decimal32:    // _Decimal32
-  case DeclSpec::TST_decimal64:    // _Decimal64
-  case DeclSpec::TST_decimal128:   // _Decimal128
-    S.Diag(DS.getTypeSpecTypeLoc(), diag::err_decimal_unsupported);
-    Result = Context.IntTy;
-    declarator.setInvalidType(true);
-    break;
+  //case DeclSpec::TST_decimal32:    // _Decimal32
+  //case DeclSpec::TST_decimal64:    // _Decimal64
+  //case DeclSpec::TST_decimal128:   // _Decimal128
+  //  S.Diag(DS.getTypeSpecTypeLoc(), diag::err_decimal_unsupported);
+  //  Result = Context.IntTy;
+  //  declarator.setInvalidType(true);
+  //  break;
   case DeclSpec::TST_class:
   case DeclSpec::TST_enum:
   case DeclSpec::TST_union:
-  case DeclSpec::TST_struct:
-  case DeclSpec::TST_interface: {
+  case DeclSpec::TST_struct: {
+  //case DeclSpec::TST_interface: {
     TypeDecl *D = dyn_cast_or_null<TypeDecl>(DS.getRepAsDecl());
     if (!D) {
       // This can happen in C++ with ambiguous lookups.
@@ -837,39 +838,40 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     // TypeQuals handled by caller.
     break;
   }
-  case DeclSpec::TST_typeofType:
-    // FIXME: Preserve type source info.
-    Result = S.GetTypeFromParser(DS.getRepAsType());
-    assert(!Result.isNull() && "Didn't get a type for typeof?");
-    if (!Result->isDependentType())
-      if (const TagType *TT = Result->getAs<TagType>())
-        S.DiagnoseUseOfDecl(TT->getDecl(), DS.getTypeSpecTypeLoc());
-    // TypeQuals handled by caller.
-    Result = Context.getTypeOfType(Result);
-    break;
-  case DeclSpec::TST_typeofExpr: {
-    Expr *E = DS.getRepAsExpr();
-    assert(E && "Didn't get an expression for typeof?");
-    // TypeQuals handled by caller.
-    Result = S.BuildTypeofExprType(E, DS.getTypeSpecTypeLoc());
-    if (Result.isNull()) {
-      Result = Context.IntTy;
-      declarator.setInvalidType(true);
-    }
-    break;
-  }
-  case DeclSpec::TST_decltype: {
-    Expr *E = DS.getRepAsExpr();
-    assert(E && "Didn't get an expression for decltype?");
-    // TypeQuals handled by caller.
-    Result = S.BuildDecltypeType(E, DS.getTypeSpecTypeLoc());
-    if (Result.isNull()) {
-      Result = Context.IntTy;
-      declarator.setInvalidType(true);
-    }
-    break;
-  }
+  //case DeclSpec::TST_typeofType:
+  //  // FIXME: Preserve type source info.
+  //  Result = S.GetTypeFromParser(DS.getRepAsType());
+  //  assert(!Result.isNull() && "Didn't get a type for typeof?");
+  //  if (!Result->isDependentType())
+  //    if (const TagType *TT = Result->getAs<TagType>())
+  //      S.DiagnoseUseOfDecl(TT->getDecl(), DS.getTypeSpecTypeLoc());
+  //  // TypeQuals handled by caller.
+  //  Result = Context.getTypeOfType(Result);
+  //  break;
+  //case DeclSpec::TST_typeofExpr: {
+  //  Expr *E = DS.getRepAsExpr();
+  //  assert(E && "Didn't get an expression for typeof?");
+  //  // TypeQuals handled by caller.
+  //  Result = S.BuildTypeofExprType(E, DS.getTypeSpecTypeLoc());
+  //  if (Result.isNull()) {
+  //    Result = Context.IntTy;
+  //    declarator.setInvalidType(true);
+  //  }
+  //  break;
+  //}
+  //case DeclSpec::TST_decltype: {
+  //  Expr *E = DS.getRepAsExpr();
+  //  assert(E && "Didn't get an expression for decltype?");
+  //  // TypeQuals handled by caller.
+  //  Result = S.BuildDecltypeType(E, DS.getTypeSpecTypeLoc());
+  //  if (Result.isNull()) {
+  //    Result = Context.IntTy;
+  //    declarator.setInvalidType(true);
+  //  }
+  //  break;
+  //}
   case DeclSpec::TST_underlyingType:
+    assert(0 && "meet TST_underlyingType");
     Result = S.GetTypeFromParser(DS.getRepAsType());
     assert(!Result.isNull() && "Didn't get a type for __underlying_type?");
     Result = S.BuildUnaryTransformType(Result,
@@ -887,9 +889,9 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   }
 
-  case DeclSpec::TST_unknown_anytype:
+  /*case DeclSpec::TST_unknown_anytype:
     Result = Context.UnknownAnyTy;
-    break;
+    break;*/
 
   case DeclSpec::TST_atomic:
     Result = S.GetTypeFromParser(DS.getRepAsType());
@@ -905,6 +907,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     Result = Context.IntTy;
     declarator.setInvalidType(true);
     break;
+  default:
+    assert(0 && "catch type specifier type value need handle");
   }
 
   // Handle complex types.

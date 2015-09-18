@@ -1455,7 +1455,7 @@ void Parser::ParseSimpleSpecification(DeclSpec &DS) {
   if (Tok.isNot(tok::semi) && Tok.is(tok::colonequal))
     assert(!"simple type specification has initializer");
   //Current token should be ';'.
-  ExpectAndConsumeSemi(diag::err_expected_semi_after_type_specification);
+  ExpectAndConsumeSemi(diag::err_expected_semi_declaration);
   
   return;
 }
@@ -1469,7 +1469,7 @@ void Parser::ParseSimpleSpecification(DeclSpec &DS) {
 Decl *Parser::ParseTypeMemberDeclaration(SourceLocation &SemiLoc) {
   // after type must be identifier in type declaration.
   if (Tok.isNot(tok::identifier)) {
-    Diag(Tok, diag::err_expected_ident_in_type_declaration);
+    Diag(Tok, diag::err_expected_ident);
     //return DeclGroupPtrTy();
   }
   // DeclSpec container
@@ -1538,6 +1538,9 @@ Decl *Parser::ParseTypeMemberDeclaration(SourceLocation &SemiLoc) {
     assert(!"string / wstring");
     break;
   // identifer, specially it can be every defined type
+  default:
+    assert(0 && "ParseTypeMemberDeclaration cases miss");
+    break;
   }
 
   if (isInvalid) {
@@ -1566,7 +1569,7 @@ Parser::DeclGroupPtrTy Parser::ParseTypeDeclaration(unsigned Context,
   // Must at least has one type declaration.
   if (Tok.is(tok::kw_end_type)) {
     // diag location correct ?
-    Diag(TypeLoc, diag::err_expected_type_declaration_member);
+    Diag(TypeLoc, diag::err_expected_ident);
     return DeclGroupPtrTy();
   }
   // If have more tha one type_declaration.
@@ -1734,7 +1737,7 @@ void Parser::ParseFakeParameterDeclarations(
     Declarator ParamDeclarator(DS, Declarator::PrototypeContext);
     // For every identifier within this group of var_input names construct a
     // declarator and doing Sema operations.
-    for (int i = 0; i < GroupId.size(); i++) {
+    for (unsigned i = 0; i < GroupId.size(); i++) {
       DeclaratorChunk::ParamInfo info = GroupId[i];
       ParamDeclarator.SetIdentifier(info.Ident, info.IdentLoc);
       // Ask the actions module to compute the type for this declarator.
@@ -1810,7 +1813,7 @@ bool Parser::ParseVarInputDeclaration(SourceLocation POCStartLoc,
   ParseFunctionDeclarator(DeclaratorInfo, attrs, T, false, false);
   PrototypeScope.Exit();
 
-  return;
+  return false;
 }
 
 /// ParseVariableDeclarations - Parse the variable declarations.
@@ -1889,13 +1892,14 @@ void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl,
 
       break;
     default:
+      break;
     // Fall through, parse the function body.
     //Diag(Tok, diag::err_expected_var_declaration_keyword);
     }
   }
 
 
-
+#if 0
   // Variable declaration start location. we do not know current token whether
   // or not is a var declaration keyword, so can not call ConsumeToken() now.
   SourceLocation EndVarKeywordLoc;
@@ -1933,17 +1937,20 @@ void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl,
     // Vector of IdInfoAndLoc object, NOT pointer.
     // SmallVector.push_back() will copy the content of argument.
     SmallVector<IdentInfoAndLoc, 8> Ids;
-    // Judge this declaration only has one identifier denpend on the state of SingleIIL.
+    // Judge this declaration only has one identifier denpend on the
+    // state of SingleIIL.
     // so the definition must be here out of the while(1) statement.
     IdentInfoAndLoc SingleIIL;
     // var_init_decl := identifier {',' identifier} ':' type ';'
     while (1) {
-      IdentInfoAndLoc IIL = IdentInfoAndLoc(Tok.getIdentifierInfo(), Tok.getLocation);
+      IdentInfoAndLoc IIL = IdentInfoAndLoc(Tok.getIdentifierInfo(),
+                                            Tok.getLocation());
       ConsumeToken(); // eat current identifier
       // Error parsing the declarator?
       if (!IIL.isInValid()) {
         isInvalid = true;
-        Diag(Tok, diag::err_expected_ident_after) << tok::getTokenName(VarKind);
+        Diag(Tok, diag::err_expected_ident);
+        //<< tok::getTokenName(VarKind);
         break;
       }
       // After has parsed a identifier, after the identifier has three situation:
@@ -1960,7 +1967,8 @@ void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl,
         break;
       } else {
         isInvalid = true;
-        Diag(Tok, diag::err_expected_comma_or_colon);
+        Diag(Tok, diag::err_expected_comma);
+        //Diag(Tok, diag::err_expected_comma_or_colon);
         // Skip and break the unlimited while.
         break;
       }
@@ -1968,17 +1976,17 @@ void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl,
     if (isInvalid)
       break; // jump out of this switch
 
-    EndLoc = Tok.getLocation();
+    SourceLocation EndLoc = Tok.getLocation();
     // Current token should be ':', if error occurs will eat until 'end_var'.
     ExpectAndConsume(tok::colon, diag::err_expected_colon_after,
                      "io_var identifiers", tok::kw_end_var);
     ParseHeadTypeSpecification(DS);
     // If no parameter was specified, verify that *something* was specified,
     // otherwise we have a missing type and identifier.
-    if (DS.isEmpty() && (Ids.size == 0 || SingleIIL.isInValid())) {
+    if (DS.isEmpty() && (Ids.size() == 0 || SingleIIL.isInValid())) {
       // Completely missing, emit error.
       isInvalid = true;
-      Diag(VDStart, diag::err_missing_param);
+      Diag(StartLoc, diag::err_missing_param);
       break;
     }
 
@@ -1994,16 +2002,16 @@ void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl,
       // added to the current scope.
       Param = Actions.ActOnParamDeclarator(getCurScope(), VarDeclInfo);
     } else {
-      for (unsigned i = 0; i != Ids.size; ++i) {
+      for (unsigned i = 0; i != Ids.size(); ++i) {
         // Build declarators using preserved identifier infos.
-        VarDeclInfo.SetIdentifier(Ids.data()[i].first, Ids.data()[i].second);
+        VarDeclInfo.SetIdentifier(Ids.data()[i].first(), Ids.data()[i].second());
         Param = Actions.ActOnParamDeclarator(getCurScope(), VarDeclInfo);
       }
     }
     ParsedAttributes FnAttrs(AttrFactory); // useless
     // Remember that we parsed a function type, and remember the attributes.
     ImagCtor.AddTypeInfo(DeclaratorChunk::getFunction(true, false,
-                                                      VDStart,
+                                                      StartLoc,
                                                       ParamInfo.data(), 
                                                       ParamInfo.size(),
                                                       SourceLocation(), EndLoc,
@@ -2019,7 +2027,7 @@ void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl,
                                                       0,
                                                       0,
                                                       0,
-                                                      VDStart, EndLoc, ImagCtor,
+                                                      StartLoc, EndLoc, ImagCtor,
                                                       TypeResult()),
                          FnAttrs, EndLoc);
 
@@ -2114,17 +2122,18 @@ void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl,
     // Fall through, parse the function body.
     //Diag(Tok, diag::err_expected_var_declaration_keyword);
   }
-
+#endif
   // Skip the total declaration statement.
   if (isInvalid) {
     TagDecl->setInvalidDecl();
     SkipUntil(tok::semi, true, true);
   }
 
+  SourceLocation EndLoc = Tok.getLocation();
   //
   if (TagDecl)
     Actions.ActOnFinishCXXMemberSpecification(getCurScope(), StartLoc, TagDecl,
-                                              VDStart, 
+                                              StartLoc, 
                                               EndLoc,
                                               0);
 
@@ -2159,7 +2168,8 @@ Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
   tok::TokenKind TK = tok::kw_class;
   SourceLocation FunctionLoc = ConsumeToken();  // eat the 'function'
   if (Tok.isNot(tok::identifier)) {
-    Diag(Tok, diag::err_expected_ident_after) << "FUNCTION";
+    Diag(Tok, diag::err_expected_ident);
+    //<< "FUNCTION";
 
     SkipUntil(tok::kw_end_function, false);
     return DeclGroupPtrTy();
@@ -2210,7 +2220,7 @@ Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
                                 PrevSpec, DiagID, TagOrTempResult.get(), Owned);
   } else {
     DS.SetTypeSpecError();
-    return;
+    return DeclGroupPtrTy();
   }
 
   if (Result) {
@@ -2222,15 +2232,15 @@ Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
   // to improve error recovery.  If an impossible token occurs next, we assume 
   // that the programmer forgot a 'end_function'at the end of the declaration and
   // recover that way.
-  ExpectAndConsume(tok::kw_end_function, 
-                   diag::err_expected_end_function_in_function_declaration);
+  ExpectAndConsume(tok::kw_end_function, diag::err_expected_greater);
+                   //"end_function");
   // Push this token back into the preprocessor and change our current token
   // to ';' so that the rest of the code recovers as though there were an
   // ';' after the definition.
   PP.EnterToken(Tok);
   Tok.setKind(tok::kw_end_function);
 
-  return;
+  return DeclGroupPtrTy();
 }
 
 ///       simple-declaration: [C99 6.7: declaration] [C++ 7p1: dcl.dcl]
@@ -4095,7 +4105,8 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
   SmallVector<Decl *, 32> FieldDecls;
 
   // While we still have something to read, read the declarations in the struct.
-  while (/*Tok.isNot(tok::r_brace)*/Tok.isNot(tok::end_struct) && Tok.isNot(tok::eof)) {
+  while (/*Tok.isNot(tok::r_brace)*/Tok.isNot(tok::kw_end_struct) &&
+         Tok.isNot(tok::eof)) {
     // Each iteration of this loop reads one struct-declaration.
 
     // Check for extraneous top-level semicolon.

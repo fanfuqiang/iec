@@ -618,6 +618,8 @@ Parser::DeclGroupPtrTy
 Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
                                  ParsingDeclSpec *DS) {
   assert(! "zet, ParseExternalDeclaration ?");
+
+  return DeclGroupPtrTy();
 }
 
 /// zet
@@ -654,7 +656,8 @@ Parser::ParseElementDeclaration() {
       // zet, well empty source will be caught here 
   case tok::eof:
   default:
-    Diag(Tok, diag::err_expected_library_element_declaration);
+    Diag(Tok, diag::err_expected_greater);
+    //Diag(Tok, diag::err_expected_library_element_declaration);
     return DeclGroupPtrTy();
   }
 }

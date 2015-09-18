@@ -1006,7 +1006,8 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   FullExprArg FullCondExp(Actions.MakeFullExpr(CondExp.get(), IfLoc));
   // zet, eat 'THEN' in if_statment
   if (Tok.isNot(tok::kw_then)) {
-    Diag(Tok, diag::err_expected_then_after) << "condition-expression of if";
+    Diag(Tok, diag::err_expected_greater);
+      //<< "condition-expression of if";
     SkipUntil(tok::kw_end_if);
     return StmtError();
   }
@@ -1083,7 +1084,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   //IfScope.Exit();
   // zet, eat 'END_IF' in if_statment
   if (Tok.isNot(tok::kw_end_if)) {
-    Diag(Tok, diag::err_expected_matched_end_if);
+    Diag(Tok, diag::err_expected_greater);
     SkipUntil(tok::kw_end_if);
     return StmtError();
   }
@@ -1161,7 +1162,8 @@ StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc) {
     return StmtError();
   // zet, eat the of
   if (Tok.isNot(tok::kw_of)) {
-    Diag(Tok, diag::err_expected_of_after) << "case expression";
+    Diag(Tok, diag::err_expected_greater);
+    //<< "case expression";
     // TODO, zet, consistent with other statement
     SkipUntil(tok::kw_of);
     return StmtError();
@@ -1281,7 +1283,8 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
 
   // zet, eat 'DO' in if_statment
   if (Tok.isNot(tok::kw_do)) {
-    Diag(Tok, diag::err_expected_do_after) << "condition-expression of while";
+    Diag(Tok, diag::err_expected_greater);
+    //Diag(Tok, diag::err_expected_do_after) << "condition-expression of while";
     // zet, skip to end_while or do ?
     SkipUntil(tok::kw_end_while);
     return StmtError();
@@ -1295,7 +1298,8 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
   WhileScope.Exit();
   // zet, eat 'END_WHILE' in if_statment
   if (Tok.isNot(tok::kw_end_while)) {
-    Diag(Tok, diag::err_expected_matched_end_while);
+    Diag(Tok, diag::err_expected_greater);
+    //Diag(Tok, diag::err_expected_matched_end_while);
     SkipUntil(tok::kw_end_while);
     return StmtError();
   }
@@ -1345,7 +1349,8 @@ StmtResult Parser::ParseDoStatement() {
   
   // zet, eat 'UNTIL' in if_statment
   if (Tok.isNot(tok::kw_until)) {
-    Diag(Tok, diag::err_expected_until_after) << "statement_list of repaet";
+    Diag(Tok, diag::err_expected_greater);
+    //Diag(Tok, diag::err_expected_until_after) << "statement_list of repaet";
     SkipUntil(tok::kw_end_repeat);
     return StmtError();
   }
@@ -1384,7 +1389,8 @@ StmtResult Parser::ParseDoStatement() {
   SourceLocation EndRepeatLoc = ConsumeToken();
   // zet, eat 'end_repeat' in if_statment
   if (Tok.isNot(tok::kw_end_repeat)) {
-    Diag(Tok, diag::err_expected_matched_end_repeat);
+    Diag(Tok, diag::err_expected_greater);
+    //Diag(Tok, diag::err_expected_matched_end_repeat);
     SkipUntil(tok::kw_end_repeat);
     return StmtError();
   }

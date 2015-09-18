@@ -72,8 +72,10 @@ namespace clang {
     TST_program,      // program
     TST_class,        // C++ class type
     TST_typename,     // Typedef, C++ class-name or enum name, etc.
+    //TST_type,         // iec
     TST_auto,         // C++0x auto
     TST_atomic,       // C11 _Atomic
+    TST_underlyingType,
     TST_error,         // erroneous type
     TST_wchar = TST_error,            // C++ wchar_t
     TST_char16 = TST_error,           // C++0x char16_t
@@ -87,7 +89,7 @@ namespace clang {
     TST_typeofType = TST_error,
     TST_typeofExpr = TST_error,
     TST_decltype = TST_error,         // C++0x decltype
-    TST_underlyingType = TST_error,   // __underlying_type for C++0x
+    //TST_underlyingType = TST_error,   // __underlying_type for C++0x
     TST_unknown_anytype = TST_error,  // __unknown_anytype extension
   };
   

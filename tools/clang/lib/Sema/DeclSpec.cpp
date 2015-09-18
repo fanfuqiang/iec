@@ -254,43 +254,44 @@ bool Declarator::isDeclarationOfFunction() const {
     }
     llvm_unreachable("Invalid type chunk");
   }
-  
+
   switch (DS.getTypeSpecType()) {
     case TST_atomic:
     case TST_auto:
     case TST_bool:
     case TST_char:
-    case TST_char16:
-    case TST_char32:
+    //case TST_char16:
+    //case TST_char32:
     case TST_class:
-    case TST_decimal128:
-    case TST_decimal32:
-    case TST_decimal64:
+    //case TST_decimal128:
+    //case TST_decimal32:
+    //case TST_decimal64:
     case TST_double:
     case TST_enum:
     case TST_error:
     case TST_float:
-    case TST_half:
+    //case TST_half:
     case TST_int:
-    case TST_int128:
+    //case TST_int128:
     case TST_struct:
-    case TST_interface:
+    //case TST_interface:
     case TST_union:
-    case TST_unknown_anytype:
+    //case TST_unknown_anytype:
     case TST_unspecified:
     case TST_void:
-    case TST_wchar:
+    //case TST_wchar:
+    case TST_program:
       return false;
 
-    case TST_decltype:
+    /*case TST_decltype:
     case TST_typeofExpr:
       if (Expr *E = DS.getRepAsExpr())
         return E->getType()->isFunctionType();
-      return false;
+      return false;*/
      
-    case TST_underlyingType:
-    case TST_typename:
-    case TST_typeofType: {
+    //case TST_underlyingType:
+    case TST_typename: {
+    //case TST_typeofType: {
       QualType QT = DS.getRepAsType().get();
       if (QT.isNull())
         return false;
@@ -303,6 +304,8 @@ bool Declarator::isDeclarationOfFunction() const {
         
       return QT->isFunctionType();
     }
+    default:
+      assert(0 && "isDeclarationOfFunction cases miss");
   }
 
   llvm_unreachable("Invalid TypeSpecType!");
@@ -385,6 +388,9 @@ const char *DeclSpec::getSpecifierName(TSS S) {
 }
 
 const char *DeclSpec::getSpecifierName(DeclSpec::TST T) {
+  // zet, Change to less key press style.
+  if (T > TST_error)
+    llvm_unreachable("Unknown typespec!");
   switch (T) {
   case DeclSpec::TST_unspecified: return "unspecified";
   case DeclSpec::TST_void:        return "void";
@@ -418,9 +424,10 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T) {
   //case DeclSpec::TST_unknown_anytype: return "__unknown_anytype";
   case DeclSpec::TST_atomic: return "_Atomic";
   case DeclSpec::TST_error:       return "(error)";
-
+  default:
+    assert(0 && "getSpecifierName cases miss");
+    return 0; // keep the warning silence
   }
-  llvm_unreachable("Unknown typespec!");
 }
 
 const char *DeclSpec::getSpecifierName(TQ T) {

@@ -3457,14 +3457,14 @@ static bool RebuildDeclaratorInCurrentInstantiation(Sema &S, Declarator &D,
     break;
   }
 
-  case DeclSpec::TST_decltype:
+  /*case DeclSpec::TST_decltype:
   case DeclSpec::TST_typeofExpr: {
     Expr *E = DS.getRepAsExpr();
     ExprResult Result = S.RebuildExprInCurrentInstantiation(E);
     if (Result.isInvalid()) return true;
     DS.UpdateExprRep(Result.get());
     break;
-  }
+  }*/
 
   default:
     // Nothing to do for these decl specs.
@@ -8874,7 +8874,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
     }
   }
 
-CreateNewDecl:
+//CreateNewDecl:
 
   TagDecl *PrevDecl = 0;
   if (Previous.isSingleResult()) {
