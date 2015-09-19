@@ -1460,6 +1460,14 @@ void Parser::ParseSimpleSpecification(DeclSpec &DS) {
   return;
 }
 
+/// ParseSubrangeSpecification - Stub.
+///
+void Parser::ParseSubrangeSpecification(DeclSpec &DS) {
+  assert(0 && "ParseSubrangeSpecification is empty");
+
+  return;
+}
+
 /// type_declaration ::= single_element_type_declaration
 ///     | array_type_declaration | struct_type_declaration
 ///     | string_type_declaration
