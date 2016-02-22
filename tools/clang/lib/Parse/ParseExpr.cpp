@@ -92,7 +92,14 @@ static prec::Level getBinOpPrecedence(tok::TokenKind Kind,
   }
 }
 
-
+/// zet, Entry point of expressions.
+/// expression ::= xor_expression {'OR' xor_expression}
+/// xor_expression ::= and_expression {'XOR', xor_expression}
+///
+/// primary_expression ::= constant | enumerated_value | variable |
+///                        '(' expression ')' | 
+///                  function_name '(' param_assignment {, param_assignment} ')'
+///
 /// \brief Simple precedence-based parser for binary/ternary operators.
 ///
 /// Note: we diverge from the C99 grammar when parsing the assignment-expression
@@ -214,6 +221,9 @@ Parser::ParseExpressionWithLeadingExtension(SourceLocation ExtLoc) {
 }
 
 /// \brief Parse an expr that doesn't include (top-level) commas.
+// zet, expression is a special statement.
+//
+// assignment_statement ::= variable ':=' expression
 ExprResult Parser::ParseAssignmentExpression(TypeCastState isTypeCast) {
   if (Tok.is(tok::code_completion)) {
     Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Expression);
@@ -278,6 +288,8 @@ bool Parser::isNotExpressionStart() {
 
 /// \brief Parse a binary expression that starts with \p LHS and has a
 /// precedence of at least \p MinPrec.
+// zet, this code is a superset of what expression of st-lang need.
+// But we need more detial to rewrite this.
 ExprResult
 Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
   prec::Level NextTokPrec = getBinOpPrecedence(Tok.getKind(),
@@ -1363,6 +1375,8 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
                 
     default:  // Not a postfix-expression suffix.
       return LHS;
+
+    // zet, ARRAY type. Need rewrite the code.
     case tok::l_square: {  // postfix-expression: p-e '[' expression ']'
       // If we have a array postfix expression that starts on a new line and
       // Objective-C is enabled, it is highly likely that the user forgot a

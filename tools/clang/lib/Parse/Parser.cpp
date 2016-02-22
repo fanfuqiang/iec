@@ -636,19 +636,19 @@ Parser::ParseElementDeclaration() {
   Decl *SingleDecl = 0;
   // shared by element declarations
   SourceLocation DeclEnd;
-  switch (Tok.getKind()) {
+  switch (tok::TokenKind k = Tok.getKind()) {
     // configuration_declaration
   case tok::kw_configuration:
     assert(!"configuration");
     // function_block_declaration
   case tok::kw_function_block:
-    assert(!"function_block");
+    // assert(!"function_block");
     // program_declaration
   case tok::kw_program:
-    assert(!"program");
+    // assert(!"program");
     // function_declaration
   case tok::kw_function:
-    return ParseFunctionDeclaration(Declarator::FileContext, DeclEnd);
+    return ParseFunctionDeclaration(Declarator::FileContext, DeclEnd, k);
    // data_type_declaration 
   case tok::kw_type:
     // A function definition cannot start with any of these keywords.

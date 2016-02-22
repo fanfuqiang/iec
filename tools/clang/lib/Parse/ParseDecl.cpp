@@ -1493,6 +1493,11 @@ Decl *Parser::ParseTypeMemberDeclaration(SourceLocation &SemiLoc) {
   //ParseDeclarationSpecifiers();
   bool isInvalid = false;
   unsigned DiagID = 0;
+  // zet
+  SourceLocation Loc = Tok.getLocation();
+  ParsedTemplateInfo TemplateInfo;
+  AccessSpecifier AS;
+  DeclSpecContext DSContext;
   // Distinguish and parse different type 
   switch (Tok.getKind()) {
   // sunrange_specification, next will be -> interger_type_name
@@ -1530,20 +1535,27 @@ Decl *Parser::ParseTypeMemberDeclaration(SourceLocation &SemiLoc) {
   }
   // enumrateed_specification, next will be -> '('
   case tok::l_paren:
-    assert(!"enum");
+    ConsumeToken();
+    ParseEnumSpecifier(Loc, DS, TemplateInfo, AS, DSContext);
+    //assert(!"enum");
     break;
   // array_specification, next will be -> 'ARRAY'
   case tok::kw_array:
-    assert(!"array");
+    ParsePostfixExpressionSuffix(ExprResult());
+    //assert(!"array");
     break;
   // struct_specification, next will be -> 'STRUCT'
   case tok::kw_struct:
-    assert(!"struct");
+    ConsumeToken();
+    ParseClassSpecifier(tok::kw_struct, Loc, DS, TemplateInfo, AS,
+                        false, DSContext);
+    //assert(!"struct");
     break;
   // string_specification, next will be -> 'STRING' or 'WSTRING'
   case tok::kw_string:
   case tok::kw_wstring:
-    assert(!"string / wstring");
+    // we have deal this in the Lexer, so just return.
+    //assert(!"string / wstring");
     break;
   // identifer, specially it can be every defined type
   default:
@@ -1614,7 +1626,13 @@ void Parser::BuildDeclaratorFromVarInfos(Declarator *D, IdentifierInfo *I,
 /// Same as -> class poc_name { var names };
 /// 
 void Parser::ParseVarDeclaration(Decl *TagDecl) {
-  assert(0 && "need coding");
+  unsigned Context;
+  ParsingDeclSpec DS(*this);
+  ParsingDeclarator D(*this, DS, static_cast<Declarator::TheContext>(Context));
+  // zet
+  // Variable in st-lang is just like a identifier declaration in C++.
+  ParseDirectDeclarator(D);
+
   return;
 }
 
@@ -2161,7 +2179,8 @@ void Parser::ParseVariableDeclarations(DeclSpec &RetTypeDecl,
 /// processing like this C++ code: 
 ///   class derived_function_name {};
 Parser::DeclGroupPtrTy Parser::ParseFunctionDeclaration(unsigned Context,
-                                                   SourceLocation &DeclEnd) {
+                                                   SourceLocation &DeclEnd,
+                                                   tok::TokenKind kind) {
   assert(Tok.is(tok::kw_function) && "Not a FUNCTION!");
   /**
     the arguments of ParseDeclarationSpecifiers() :
@@ -5439,6 +5458,8 @@ static void diagnoseMisplacedEllipsis(Parser &P, Declarator &D,
 ///
 /// Note, any additional constructs added here may need corresponding changes
 /// in isConstructorDeclarator.
+/// zet, Var_declaration of st-lang will be vary like this code fragement. All
+/// this two are entity declarations.
 void Parser::ParseDirectDeclarator(Declarator &D) {
   DeclaratorScopeObj DeclScopeObj(*this, D.getCXXScopeSpec());
 #if 0

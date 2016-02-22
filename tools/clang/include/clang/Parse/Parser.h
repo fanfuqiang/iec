@@ -1683,7 +1683,8 @@ private:
                                       SourceLocation &DeclEnd);
   Decl *ParseTypeMemberDeclaration(SourceLocation &SemiLoc);
   DeclGroupPtrTy ParseFunctionDeclaration(unsigned Context,
-                                          SourceLocation &DeclEnd);
+                                          SourceLocation &DeclEnd,
+                                          tok::TokenKind kind);
   DeclGroupPtrTy ParseSimpleDeclaration(StmtVector &Stmts,
                                         unsigned Context,
                                         SourceLocation &DeclEnd,

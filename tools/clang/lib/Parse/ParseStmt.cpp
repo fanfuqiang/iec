@@ -37,9 +37,13 @@ using namespace clang;
 ///         labeled-statement
 ///         compound-statement
 ///         expression-statement
-///         selection-statement
-///         iteration-statement
+/// [ST]    selection-statement
+/// [ST]    iteration-statement
 ///         jump-statement
+///
+// zet, st-lang, assignment-statement is just a assignment expression
+// add a semicolon.
+/// [ST]    assignment_statement
 /// [C++]   declaration-statement
 /// [C++]   try-block
 /// [MS]    seh-try-block
@@ -184,7 +188,7 @@ Retry:
 
     return ParseExprStatement();
   }
-
+  // zet, case_statement
   case tok::kw_case:                // C99 6.8.1: labeled-statement
     return ParseCaseStatement();
   case tok::kw_default:             // C99 6.8.1: labeled-statement
@@ -196,14 +200,14 @@ Retry:
     bool HasLeadingEmptyMacro = Tok.hasLeadingEmptyMacro();
     return Actions.ActOnNullStmt(ConsumeToken(), HasLeadingEmptyMacro);
   }
-
+  // zet, if_statement
   case tok::kw_if:                  // C99 6.8.4.1: if-statement
     return ParseIfStatement(TrailingElseLoc);
   // zet
   case tok::kw_switch:              // C99 6.8.4.2: switch-statement
   //case tok::kw_case:
     return ParseSwitchStatement(TrailingElseLoc);
-
+  // zet, while_statement
   case tok::kw_while:               // C99 6.8.5.1: while-statement
     return ParseWhileStatement(TrailingElseLoc);
   // zet, we have repeat but not do
@@ -212,6 +216,7 @@ Retry:
     Res = ParseDoStatement();
     SemiError = "do/while";
     break;
+  // zet, for_statement
   case tok::kw_for:                 // C99 6.8.5.3: for-statement
     return ParseForStatement(TrailingElseLoc);
 
@@ -492,6 +497,13 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributesWithRange &attrs) {
 ///         'case' constant-expression ':' statement
 /// [GNU]   'case' constant-expression '...' constant-expression ':' statement
 ///
+/// st-lang
+/// case_statement ::=
+///   'CASE' expression 'OF'
+///     case_element
+///     {case_element}
+///     ['ELSE' statement_list]
+///   'END_CASE'
 StmtResult Parser::ParseCaseStatement(bool MissingCase, ExprResult Expr) {
   assert((MissingCase || Tok.is(tok::kw_case)) && "Not a case stmt!");
 
@@ -1422,6 +1434,9 @@ StmtResult Parser::ParseDoStatement() {
 /// [C++0x] for-range-initializer:
 /// [C++0x]   expression
 /// [C++0x]   braced-init-list            [TODO]
+/// zet
+/// [ST]  for_statement ::=
+/// [ST]    'FOR' control_variable ':=' for_list 'DO' statement_list 'END_FOR'
 StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
   assert(Tok.is(tok::kw_for) && "Not a for stmt!");
   SourceLocation ForLoc = ConsumeToken();  // eat the 'for'.
@@ -1544,6 +1559,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
         FirstPart = Actions.ActOnExprStmt(Actions.MakeFullExpr(Value.get()));
     }
 
+    // zet, We have ont any semi in st-lang.
+    // TODO
     if (Tok.is(tok::semi)) {
       ConsumeToken();
     } else if (ForEach) {
